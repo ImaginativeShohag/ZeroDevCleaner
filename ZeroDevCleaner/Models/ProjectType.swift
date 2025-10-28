@@ -2,7 +2,7 @@
 //  ProjectType.swift
 //  ZeroDevCleaner
 //
-//  Created by AI Agent.
+//  Created by Md. Mahmudul Hasan Shohag on 29/10/25.
 //
 
 import Foundation
