@@ -13,6 +13,7 @@ struct ScanResultsView: View {
     let onSelectAll: () -> Void
     let onDeselectAll: () -> Void
     let onDelete: () -> Void
+    let onShowInFinder: (BuildFolder) -> Void
     let selectedSize: String
 
     var body: some View {
@@ -74,6 +75,20 @@ struct ScanResultsView: View {
                         .help(folder.path.path)
                 }
             }
+            .contextMenu(forSelectionType: BuildFolder.ID.self) { items in
+                if let itemId = items.first,
+                   let folder = results.first(where: { $0.id == itemId }) {
+                    Button("Show in Finder") {
+                        onShowInFinder(folder)
+                    }
+                }
+            } primaryAction: { items in
+                // Double-click action
+                if let itemId = items.first,
+                   let folder = results.first(where: { $0.id == itemId }) {
+                    onShowInFinder(folder)
+                }
+            }
         }
     }
 
@@ -98,6 +113,7 @@ struct ScanResultsView: View {
         onSelectAll: {},
         onDeselectAll: {},
         onDelete: {},
+        onShowInFinder: { _ in },
         selectedSize: "100 MB"
     )
 }

@@ -89,6 +89,19 @@ final class MainViewModel {
         }
     }
 
+    /// Selects a folder at the given URL
+    func selectFolder(at url: URL) {
+        // Verify it's a directory
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else {
+            handleError(ZeroDevCleanerError.fileNotFound(url))
+            return
+        }
+
+        selectedFolder = url
+    }
+
     // MARK: - Scanning
 
     /// Starts scanning the selected folder
@@ -139,6 +152,14 @@ final class MainViewModel {
         if let index = scanResults.firstIndex(where: { $0.id == folder.id }) {
             scanResults[index].isSelected.toggle()
         }
+    }
+
+    /// Reveals the folder in Finder
+    func showInFinder(folder: BuildFolder) {
+        NSWorkspace.shared.selectFile(
+            folder.path.path,
+            inFileViewerRootedAtPath: folder.path.deletingLastPathComponent().path
+        )
     }
 
     /// Selects all folders

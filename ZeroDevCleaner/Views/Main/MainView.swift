@@ -13,7 +13,12 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.scanResults.isEmpty && !viewModel.isScanning {
-                EmptyStateView(onSelectFolder: viewModel.selectFolder)
+                EmptyStateView(
+                    onSelectFolder: viewModel.selectFolder,
+                    onFolderDropped: { url in
+                        viewModel.selectFolder(at: url)
+                    }
+                )
             } else if viewModel.isScanning {
                 ScanProgressView(
                     progress: viewModel.scanProgress,
@@ -27,6 +32,7 @@ struct MainView: View {
                     onSelectAll: viewModel.selectAll,
                     onDeselectAll: viewModel.deselectAll,
                     onDelete: viewModel.deleteSelectedFolders,
+                    onShowInFinder: viewModel.showInFinder,
                     selectedSize: viewModel.formattedSelectedSize
                 )
             }
@@ -53,6 +59,29 @@ struct MainView: View {
                     }
                     .disabled(viewModel.isScanning)
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .selectFolder)) { _ in
+            viewModel.selectFolder()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startScan)) { _ in
+            if viewModel.selectedFolder != nil && !viewModel.isScanning {
+                viewModel.startScan()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in
+            if !viewModel.scanResults.isEmpty {
+                viewModel.selectAll()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deselectAll)) { _ in
+            if !viewModel.scanResults.isEmpty {
+                viewModel.deselectAll()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deleteSelected)) { _ in
+            if !viewModel.selectedFolders.isEmpty {
+                viewModel.deleteSelectedFolders()
             }
         }
     }
