@@ -128,6 +128,18 @@ final class MainViewModel {
     /// Whether to show deletion confirmation dialog
     var showDeletionConfirmation: Bool = false
 
+    /// Whether to show deletion progress dialog
+    var showDeletionProgress: Bool = false
+
+    /// Current item being deleted
+    var currentDeletionItem: String = ""
+
+    /// Number of items deleted so far
+    var deletedItemCount: Int = 0
+
+    /// Total size of items deleted so far
+    var deletedSize: Int64 = 0
+
     // MARK: - Dependencies
 
     private let scanner: FileScannerProtocol
@@ -417,14 +429,26 @@ final class MainViewModel {
 
         Logger.deletion.info("Starting deletion of \(foldersToDelete.count) folders")
 
+        // Initialize progress tracking
         isDeleting = true
         deletionProgress = 0.0
+        showDeletionProgress = true
+        deletedItemCount = 0
+        deletedSize = 0
+        currentDeletionItem = ""
 
         Task {
             do {
                 try await deleter.delete(folders: foldersToDelete) { [weak self] current, total in
                     guard let self else { return }
                     Task { @MainActor in
+                        self.deletedItemCount = current
+                        if current > 0 && current <= foldersToDelete.count {
+                            let currentFolder = foldersToDelete[current - 1]
+                            self.currentDeletionItem = currentFolder.projectName
+                            // Calculate total deleted size from all completed folders
+                            self.deletedSize = foldersToDelete.prefix(current).reduce(0) { $0 + $1.size }
+                        }
                         self.deletionProgress = Double(current) / Double(total)
                     }
                 }
@@ -438,6 +462,7 @@ final class MainViewModel {
 
                 Logger.deletion.info("Successfully deleted \(foldersToDelete.count) folders")
                 self.isDeleting = false
+                self.showDeletionProgress = false
             } catch let error as ZeroDevCleanerError {
                 // Handle partial deletion failure
                 if case .partialDeletionFailure(let failedURLs) = error {
@@ -456,10 +481,12 @@ final class MainViewModel {
 
                 self.handleError(error)
                 self.isDeleting = false
+                self.showDeletionProgress = false
             } catch {
                 Logger.deletion.error("Deletion failed: \(error.localizedDescription, privacy: .public)")
                 self.handleError(error)
                 self.isDeleting = false
+                self.showDeletionProgress = false
             }
         }
     }

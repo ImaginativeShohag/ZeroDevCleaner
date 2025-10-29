@@ -70,6 +70,19 @@ struct MainView: View {
                 onCancel: { viewModel.showDeletionConfirmation = false }
             )
         }
+        .sheet(isPresented: $viewModel.showDeletionProgress) {
+            DeletionProgressView(
+                currentItem: viewModel.currentDeletionItem,
+                progress: viewModel.deletionProgress,
+                currentIndex: viewModel.deletedItemCount,
+                totalItems: viewModel.selectedFolders.count,
+                deletedSize: viewModel.deletedSize,
+                totalSize: viewModel.selectedSize,
+                canCancel: false,
+                onCancel: {}
+            )
+            .interactiveDismissDisabled()
+        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button("Select Folder") {
