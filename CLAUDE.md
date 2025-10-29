@@ -2,7 +2,7 @@
 
 ## Last Updated: 2025-10-29
 
-## Current Status: Phase 1 Complete ✅
+## Current Status: Phase 2 Complete ✅
 
 ### Phase 1: Foundation (Complete)
 
@@ -28,6 +28,38 @@
 4. ✅ App Entry Point
    - Placeholder view configured
    - Window settings configured
+
+### Phase 2: Core Services (Complete)
+
+**Duration**: ~40 minutes
+**Commits**: 6 commits
+
+#### Completed Services:
+1. ✅ ProjectValidator Service
+   - Protocol-based design with Sendable conformance
+   - Android project validation (build.gradle, settings.gradle detection)
+   - iOS/Xcode project validation (.xcodeproj, .xcworkspace detection)
+   - Swift Package validation (Package.swift detection)
+   - Comprehensive tests (16+ test cases)
+
+2. ✅ FileSizeCalculator Service
+   - Async directory size calculation
+   - Uses structured concurrency (Task, async/await)
+   - Thread-safe with nonisolated properties
+   - Handles nested directory structures
+
+3. ✅ FileScanner Service
+   - Recursive directory scanning with depth limits
+   - Parallel task groups for performance
+   - Progress callbacks for UI updates
+   - Integrates ProjectValidator and FileSizeCalculator
+   - Creates BuildFolder models with metadata
+
+4. ✅ FileDeleter Service
+   - Safe deletion using macOS Trash
+   - Async deletion with progress tracking
+   - Error handling with custom error types
+   - Thread-safe operations
 
 #### Project Structure:
 ```
