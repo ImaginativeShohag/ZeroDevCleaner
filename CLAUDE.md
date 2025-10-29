@@ -297,7 +297,7 @@ The app now includes all high-priority enhancements:
 
 ### 🔵 Current Work - Phase 7: Testing & Quality Assurance
 
-**Progress**: Task 7.1 Complete ✅
+**Progress**: Tasks 7.1 & 7.2 Complete ✅
 
 #### Completed Tasks:
 
@@ -309,19 +309,31 @@ The app now includes all high-priority enhancements:
    - Total test count: 50+ tests passing
    - Comprehensive coverage of Phase 6 features
 
+2. ✅ **Task 7.2: Integration Tests** (2 hours)
+   - Created comprehensive integration test framework
+   - 11 end-to-end workflow tests
+   - Tests complete user journeys (scan, filter, delete)
+   - Tests error scenarios and edge cases
+   - Tests concurrent operation prevention
+   - Framework in place for regression testing
+
+3. ✅ **Critical Bug Fix: Cancel Dialog on Scan Start**
+   - Fixed cancelScan() showing error on first scan
+   - Issue: cancelScan() called by startScan() for cleanup
+   - Was showing error whenever scanResults.isEmpty
+   - Fix: Only show error if actually scanning (wasScanning check)
+
 #### Remaining Tasks:
 
-**Remaining Tasks in Phase 7** (6-10 hours):
+**Remaining Tasks in Phase 7** (4-6 hours):
 
-2. **Task 7.2: Integration Tests** (3 hours) - NEXT
-   - Test complete scan-to-delete flows
-   - Test error scenarios end-to-end
-
-3. **Task 7.3: Manual Testing** (2-3 hours)
+3. **Task 7.3: Manual Testing** (2-3 hours) - NEXT
    - Full app walkthrough
    - Test all keyboard shortcuts
    - Test all error scenarios
    - Test permission handling
+   - Test drag & drop
+   - Test recent folders
 
 4. **Task 7.4: Performance Testing** (2-3 hours)
    - Test with large directories
@@ -330,9 +342,9 @@ The app now includes all high-priority enhancements:
 
 ### 📋 Remaining Work (Per docs/13-remaining-features-plan.md)
 
-#### 🔴 Must Have (For Release) - 12-18 hours remaining
-1. **Phase 7: Testing & QA** (6-10 hours remaining) - IN PROGRESS
-   - Task 7.2, 7.3, 7.4 (see above)
+#### 🔴 Must Have (For Release) - 10-14 hours remaining
+1. **Phase 7: Testing & QA** (4-6 hours remaining) - IN PROGRESS
+   - Task 7.3, 7.4 (see above)
 2. **Phase 10: Documentation & Release** (6-8 hours)
    - Code documentation
    - User guide
