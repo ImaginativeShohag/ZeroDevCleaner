@@ -71,4 +71,21 @@ final class MainViewModel {
 
         self.init(scanner: scanner, deleter: deleter)
     }
+
+    // MARK: - Folder Selection
+
+    /// Opens folder selection dialog
+    func selectFolder() {
+        let panel = NSOpenPanel()
+        panel.title = "Select Folder to Scan"
+        panel.message = "Choose a directory to scan for build folders"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = false
+        panel.allowsMultipleSelection = false
+
+        if panel.runModal() == .OK {
+            selectedFolder = panel.url
+        }
+    }
 }
