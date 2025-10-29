@@ -75,6 +75,7 @@ struct MainView: View {
                 Button("Select Folder") {
                     viewModel.selectFolder()
                 }
+                .disabled(viewModel.isScanning || viewModel.isDeleting)
             }
 
             if viewModel.selectedFolder != nil {
@@ -82,7 +83,7 @@ struct MainView: View {
                     Button("Scan") {
                         viewModel.startScan()
                     }
-                    .disabled(viewModel.isScanning)
+                    .disabled(viewModel.isScanning || viewModel.isDeleting)
                 }
             }
 
@@ -94,6 +95,7 @@ struct MainView: View {
                             Button(url.lastPathComponent) {
                                 viewModel.selectFolder(at: url)
                             }
+                            .disabled(viewModel.isScanning || viewModel.isDeleting)
                         }
 
                         Divider()
@@ -104,29 +106,32 @@ struct MainView: View {
                     } label: {
                         Label("Recent", systemImage: "clock.arrow.circlepath")
                     }
+                    .disabled(viewModel.isScanning || viewModel.isDeleting)
                 }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectFolder)) { _ in
-            viewModel.selectFolder()
+            if !viewModel.isScanning && !viewModel.isDeleting {
+                viewModel.selectFolder()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .startScan)) { _ in
-            if viewModel.selectedFolder != nil && !viewModel.isScanning {
+            if viewModel.selectedFolder != nil && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.startScan()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in
-            if !viewModel.scanResults.isEmpty {
+            if !viewModel.scanResults.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.selectAll()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deselectAll)) { _ in
-            if !viewModel.scanResults.isEmpty {
+            if !viewModel.scanResults.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.deselectAll()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deleteSelected)) { _ in
-            if !viewModel.selectedFolders.isEmpty {
+            if !viewModel.selectedFolders.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.deleteSelectedFolders()
             }
         }

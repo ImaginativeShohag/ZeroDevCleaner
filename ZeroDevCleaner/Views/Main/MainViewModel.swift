@@ -162,6 +162,12 @@ final class MainViewModel {
     func startScan() {
         guard let folder = selectedFolder else { return }
 
+        // Prevent concurrent scans
+        guard !isScanning else { return }
+
+        // Prevent scanning while deleting
+        guard !isDeleting else { return }
+
         // Cancel any existing scan
         cancelScan()
 
@@ -223,7 +229,16 @@ final class MainViewModel {
     func cancelScan() {
         scanTask?.cancel()
         scanTask = nil
+
+        // Show partial results if we have any
+        // The scan will complete with whatever results were found up to the cancellation point
         isScanning = false
+
+        // Only show cancelled error if we have no results
+        if scanResults.isEmpty {
+            currentError = .scanCancelled
+            showError = true
+        }
     }
 
     // MARK: - Selection Management
@@ -299,6 +314,12 @@ final class MainViewModel {
     func deleteSelectedFolders() {
         let foldersToDelete = selectedFolders
         guard !foldersToDelete.isEmpty else { return }
+
+        // Prevent concurrent deletions
+        guard !isDeleting else { return }
+
+        // Prevent deletion while scanning
+        guard !isScanning else { return }
 
         isDeleting = true
         deletionProgress = 0.0

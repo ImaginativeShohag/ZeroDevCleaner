@@ -59,15 +59,23 @@ final class FileScanner: FileScannerProtocol {
     ) async throws {
         guard currentDepth < maxDepth else { return }
 
+        // Get directory contents, skipping hidden files
         let contents = try fileManager.contentsOfDirectory(
             at: url,
-            includingPropertiesForKeys: [.isDirectoryKey],
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
             options: [.skipsHiddenFiles]
         )
 
         for itemURL in contents {
-            let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey])
+            let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+
+            // Skip if not a directory
             guard resourceValues.isDirectory == true else { continue }
+
+            // Skip symlinks for safety (prevents following links outside root, infinite loops)
+            if let isSymlink = resourceValues.isSymbolicLink, isSymlink {
+                continue
+            }
 
             let folderName = itemURL.lastPathComponent
 
