@@ -323,4 +323,9 @@ final class MainViewModel {
         PermissionManager.shared.requestFullDiskAccess()
         dismissError()
     }
+
+    /// Reveals app location in Finder for Full Disk Access setup
+    func revealAppInFinder() {
+        PermissionManager.shared.revealAppInFinder()
+    }
 }

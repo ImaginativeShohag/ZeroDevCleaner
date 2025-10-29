@@ -14,10 +14,12 @@ struct MainView: View {
         VStack(spacing: 0) {
             if viewModel.scanResults.isEmpty && !viewModel.isScanning {
                 EmptyStateView(
+                    selectedFolder: viewModel.selectedFolder,
                     onSelectFolder: viewModel.selectFolder,
                     onFolderDropped: { url in
                         viewModel.selectFolder(at: url)
-                    }
+                    },
+                    onStartScan: viewModel.startScan
                 )
             } else if viewModel.isScanning {
                 ScanProgressView(
@@ -52,11 +54,14 @@ struct MainView: View {
             Button("Open System Settings") {
                 viewModel.openSystemSettings()
             }
+            Button("Show App in Finder") {
+                viewModel.revealAppInFinder()
+            }
             Button("Cancel", role: .cancel) {
                 viewModel.dismissError()
             }
         } message: {
-            Text("ZeroDevCleaner needs Full Disk Access to scan your development folders.\n\n1. Click 'Open System Settings'\n2. Enable 'ZeroDevCleaner' in the Full Disk Access list\n3. Restart the app and try again")
+            Text("ZeroDevCleaner needs Full Disk Access to scan your development folders.\n\n1. Click 'Show App in Finder' to locate the app\n2. Click 'Open System Settings'\n3. Drag the app to Full Disk Access list or click '+' to add it\n4. Enable 'ZeroDevCleaner' in the list\n5. Restart the app and try again")
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {

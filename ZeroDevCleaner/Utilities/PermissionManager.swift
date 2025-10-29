@@ -45,6 +45,15 @@ final class PermissionManager: Sendable {
         NSWorkspace.shared.open(url)
     }
 
+    /// Reveals the app bundle location in Finder
+    ///
+    /// This helps users find the app to add it to Full Disk Access settings.
+    /// The app will be highlighted in Finder after calling this method.
+    func revealAppInFinder() {
+        guard let bundlePath = Bundle.main.bundleURL.path as String? else { return }
+        NSWorkspace.shared.selectFile(bundlePath, inFileViewerRootedAtPath: "")
+    }
+
     /// Checks if a specific path is accessible
     ///
     /// - Parameter path: The URL to check
