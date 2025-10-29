@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import OSLog
 
 /// Manages macOS permissions, specifically Full Disk Access
 @MainActor
@@ -69,6 +70,7 @@ final class PermissionManager: Sendable {
     /// 2. Toggle it on
     /// 3. Return to the app
     func requestFullDiskAccess() {
+        Logger.permission.info("Opening System Settings for Full Disk Access")
         // URL scheme to open System Settings to Full Disk Access
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
         NSWorkspace.shared.open(url)
@@ -79,6 +81,7 @@ final class PermissionManager: Sendable {
     /// This helps users find the app to add it to Full Disk Access settings.
     /// The app will be highlighted in Finder after calling this method.
     func revealAppInFinder() {
+        Logger.permission.info("Revealing app in Finder")
         guard let bundlePath = Bundle.main.bundleURL.path as String? else { return }
         NSWorkspace.shared.selectFile(bundlePath, inFileViewerRootedAtPath: "")
     }

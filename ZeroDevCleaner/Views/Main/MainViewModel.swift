@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Observation
+import OSLog
 
 @Observable
 @MainActor
@@ -163,10 +164,18 @@ final class MainViewModel {
         guard let folder = selectedFolder else { return }
 
         // Prevent concurrent scans
-        guard !isScanning else { return }
+        guard !isScanning else {
+            Logger.scanning.warning("Attempted to start scan while scan already in progress")
+            return
+        }
 
         // Prevent scanning while deleting
-        guard !isDeleting else { return }
+        guard !isDeleting else {
+            Logger.scanning.warning("Attempted to start scan while deletion in progress")
+            return
+        }
+
+        Logger.scanning.info("Starting scan at: \(folder.path)")
 
         // Cancel any existing scan
         cancelScan()
@@ -192,8 +201,11 @@ final class MainViewModel {
                 self.scanResults = results
                 self.isScanning = false
 
+                Logger.scanning.info("Scan completed. Found \(results.count) build folders")
+
                 // Check for empty results
                 if results.isEmpty {
+                    Logger.scanning.notice("No build folders found at: \(folder.path)")
                     self.currentError = .noResultsFound(folder)
                     self.showError = true
                 } else {
@@ -201,6 +213,8 @@ final class MainViewModel {
                     self.recentFoldersManager.addFolder(folder)
                 }
             } catch let error as NSError {
+                Logger.scanning.error("Scan failed with NSError: \(error.localizedDescription, privacy: .public)")
+
                 // Check if this is a permission error
                 // NSFileReadNoPermissionError = 257
                 // NSFileReadNoSuchFileError = 260 (sometimes returned for permission issues)
@@ -219,6 +233,7 @@ final class MainViewModel {
                 }
                 self.isScanning = false
             } catch {
+                Logger.scanning.error("Scan failed: \(error.localizedDescription, privacy: .public)")
                 self.handleError(error)
                 self.isScanning = false
             }
@@ -227,6 +242,7 @@ final class MainViewModel {
 
     /// Cancels the current scan
     func cancelScan() {
+        Logger.scanning.info("Cancelling scan")
         scanTask?.cancel()
         scanTask = nil
 
@@ -238,6 +254,8 @@ final class MainViewModel {
         if scanResults.isEmpty {
             currentError = .scanCancelled
             showError = true
+        } else {
+            Logger.scanning.info("Scan cancelled. Showing \(self.scanResults.count) partial results")
         }
     }
 
@@ -316,10 +334,18 @@ final class MainViewModel {
         guard !foldersToDelete.isEmpty else { return }
 
         // Prevent concurrent deletions
-        guard !isDeleting else { return }
+        guard !isDeleting else {
+            Logger.deletion.warning("Attempted to start deletion while deletion already in progress")
+            return
+        }
 
         // Prevent deletion while scanning
-        guard !isScanning else { return }
+        guard !isScanning else {
+            Logger.deletion.warning("Attempted to start deletion while scan in progress")
+            return
+        }
+
+        Logger.deletion.info("Starting deletion of \(foldersToDelete.count) folders")
 
         isDeleting = true
         deletionProgress = 0.0
@@ -340,6 +366,7 @@ final class MainViewModel {
                     }
                 }
 
+                Logger.deletion.info("Successfully deleted \(foldersToDelete.count) folders")
                 self.isDeleting = false
             } catch let error as ZeroDevCleanerError {
                 // Handle partial deletion failure
@@ -353,11 +380,14 @@ final class MainViewModel {
                             self.scanResults.remove(at: index)
                         }
                     }
+
+                    Logger.deletion.warning("Partial deletion failure: \(failedURLs.count) of \(foldersToDelete.count) failed")
                 }
 
                 self.handleError(error)
                 self.isDeleting = false
             } catch {
+                Logger.deletion.error("Deletion failed: \(error.localizedDescription, privacy: .public)")
                 self.handleError(error)
                 self.isDeleting = false
             }
