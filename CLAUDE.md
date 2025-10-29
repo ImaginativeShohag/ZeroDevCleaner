@@ -345,6 +345,21 @@ The app now includes all high-priority enhancements:
    - Added readable file check before deletion
    - Validates trashed URL is returned from recycle operation
 
+7. ✅ **CRITICAL FIX: App Sandbox Preventing File Deletion**
+   - **Root Cause**: App Sandbox was enabled by default, blocking all file deletions
+   - Even with Full Disk Access, sandboxed apps can't access files outside their container
+   - **Solution**: Disabled App Sandbox for full file system access
+   - Created entitlements file with proper permissions
+   - Updated Xcode project configuration:
+     - `ENABLE_APP_SANDBOX = NO`
+     - `CODE_SIGN_ENTITLEMENTS = ZeroDevCleaner/ZeroDevCleaner.entitlements`
+     - `ENABLE_HARDENED_RUNTIME = YES`
+   - Entitlements:
+     - `com.apple.security.app-sandbox = false` (disable sandbox)
+     - `com.apple.security.files.user-selected.read-write = true` (access user files)
+     - `com.apple.security.cs.disable-library-validation = true` (development)
+   - **File deletion now works correctly!** ✅
+
 #### Remaining Tasks:
 
 **Remaining Tasks in Phase 7** (4-6 hours):
