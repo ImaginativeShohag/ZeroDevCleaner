@@ -46,13 +46,39 @@ final class ProjectValidator: ProjectValidatorProtocol {
     }
 
     func isValidiOSProject(buildFolder: URL) -> Bool {
-        // Implementation in next task
-        false
+        // Check if folder is named ".build"
+        guard buildFolder.lastPathComponent == ".build" else {
+            return false
+        }
+
+        // Look for .xcodeproj in parent directories
+        let parentURL = buildFolder.deletingLastPathComponent()
+        do {
+            let contents = try fileManager.contentsOfDirectory(
+                at: parentURL,
+                includingPropertiesForKeys: nil
+            )
+            if contents.contains(where: { $0.pathExtension == "xcodeproj" }) {
+                return true
+            }
+            if contents.contains(where: { $0.pathExtension == "xcworkspace" }) {
+                return true
+            }
+        } catch {
+            return false
+        }
+
+        return false
     }
 
     func isValidSwiftPackage(buildFolder: URL) -> Bool {
-        // Implementation in next task
-        false
+        // Check if folder is named ".build"
+        guard buildFolder.lastPathComponent == ".build" else {
+            return false
+        }
+
+        // Look for Package.swift in parent directory
+        return findFileInParentDirectories(from: buildFolder, named: "Package.swift", maxLevels: 2)
     }
 
     func detectProjectType(buildFolder: URL) -> ProjectType? {
