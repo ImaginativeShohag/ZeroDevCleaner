@@ -13,6 +13,62 @@
 
 ---
 
+## 🎯 Next Priority: New Feature Additions
+
+### 🔥 HIGH PRIORITY: Core Feature Enhancements (12-16 hours)
+
+**These tasks have been prioritized and moved to the front:**
+
+#### 1. Known Static Directories Support (4-5 hours)
+**Goal**: Add support for common static build directories that don't require scanning
+
+**Directories to support:**
+- **DerivedData** (Xcode): `~/Library/Developer/Xcode/DerivedData`
+- **Gradle Cache** (Android): `~/.gradle/caches`
+- **CocoaPods** (iOS): `~/Library/Caches/CocoaPods`
+- **npm/yarn** cache: `~/.npm`, `~/.yarn/cache`
+- **Carthage**: `~/Library/Caches/org.carthage.CarthageKit`
+
+**Implementation:**
+- Create StaticLocation model
+- Add StaticLocationScanner service
+- Update UI to show both scanned and static locations
+- Add toggle to include/exclude static locations
+- Calculate sizes for these directories
+
+#### 2. Settings Panel for Multiple Scan Locations (4-6 hours)
+**Goal**: Let users configure multiple folders to scan instead of selecting one at a time
+
+**Features:**
+- Settings window/sheet with scan location management
+- Add/remove scan locations
+- Enable/disable individual locations
+- Persistent storage of locations
+- Quick scan all configured locations
+- Show last scan time for each location
+
+**Implementation:**
+- Create SettingsView with location list
+- Add ScanLocation model with persistence
+- Update MainViewModel to handle multiple locations
+- Add "Scan All" functionality
+- Store settings in UserDefaults/AppStorage
+
+#### 3. Open Source Preparation (3-5 hours)
+**Goal**: Prepare project for open source release
+
+**Tasks:**
+- Create comprehensive README.md
+- Add LICENSE file (MIT License recommended)
+- Add CONTRIBUTING.md guidelines
+- Add CODE_OF_CONDUCT.md
+- Update code comments and documentation
+- Add screenshots and demo GIF
+- Create GitHub repository
+- Add GitHub Actions for CI (optional)
+
+---
+
 ## 🎯 Next Priority: Feature Enhancements
 
 ### Phase 5: Enhanced UI & Polish (3 hours remaining)
