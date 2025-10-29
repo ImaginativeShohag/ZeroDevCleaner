@@ -235,16 +235,27 @@ The app now includes all high-priority enhancements:
 
 ---
 
-## Next Steps: Phase 6 & Beyond
+## Next Steps: Critical Permission Task First
+
+### ⚠️ CRITICAL - Must Implement Immediately
+
+**Task 6.2: Permission Handling & Full Disk Access** (2 hours)
+- **Priority**: CRITICAL - Highest priority task
+- **Why Critical**: The app cannot function without Full Disk Access on macOS
+- Users currently see "permission denied" errors when scanning most directories
+- The app appears broken and unusable without this
+- MUST be implemented before any real-world testing or production use
+
+**Implementation**: See `docs/13-remaining-features-plan.md` line ~465 for full details
 
 ### 📋 Remaining Work (Per docs/13-remaining-features-plan.md)
 
 #### 🔴 Must Have (For Release) - 20-28 hours remaining
-1. **Phase 6: Error Handling & Robustness** (6-8 hours)
-   - Comprehensive error handling for all scenarios
-   - Full Disk Access detection and permission flow
-   - Edge cases (empty results, cancellation, partial failures)
-   - Logging support
+1. **Phase 6: Error Handling & Robustness** (6-8 hours) ⚠️ **START HERE**
+   - ⚠️ Task 6.2: Permission Handling & Full Disk Access (2h) **DO FIRST**
+   - Task 6.1: Comprehensive error handling for all scenarios (2h)
+   - Task 6.3: Edge cases (empty results, cancellation, partial failures) (2-3h)
+   - Task 6.4: Logging support (1h)
 
 2. **Phase 7: Testing & QA** (8-12 hours)
    - Expand unit tests for new features
