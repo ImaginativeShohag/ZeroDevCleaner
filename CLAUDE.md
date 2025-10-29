@@ -23,7 +23,8 @@
 
 3. ✅ Unit Tests
    - 15+ comprehensive model tests created
-   - Tests ready (test target needs Xcode GUI setup)
+   - 16+ service tests (ProjectValidator)
+   - All tests passing with Swift 6 concurrency
 
 4. ✅ App Entry Point
    - Placeholder view configured
@@ -87,7 +88,7 @@ ZeroDevCleanerTests/
 - ✅ Clean build succeeds
 - ✅ No compiler warnings
 - ✅ Swift 6 compliant
-- ⚠️ Tests need target setup in Xcode
+- ✅ Test target configured and all tests passing (31+ tests)
 
 ### Next Phase: Phase 2 - Core Services
 
