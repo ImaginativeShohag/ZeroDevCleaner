@@ -15,8 +15,34 @@ final class ProjectValidator: ProjectValidatorProtocol {
     }
 
     func isValidAndroidProject(buildFolder: URL) -> Bool {
-        // Implementation in next task
-        false
+        // Check if folder is named "build"
+        guard buildFolder.lastPathComponent == "build" else {
+            return false
+        }
+
+        // Look for build.gradle or build.gradle.kts in parent directories
+        if findFileInParentDirectories(from: buildFolder, named: "build.gradle") ||
+           findFileInParentDirectories(from: buildFolder, named: "build.gradle.kts") {
+            return true
+        }
+
+        // Look for settings.gradle or settings.gradle.kts
+        if findFileInParentDirectories(from: buildFolder, named: "settings.gradle") ||
+           findFileInParentDirectories(from: buildFolder, named: "settings.gradle.kts") {
+            return true
+        }
+
+        // Check for app/build.gradle pattern (multi-module project)
+        let parentURL = buildFolder.deletingLastPathComponent()
+        if parentURL.lastPathComponent == "app" {
+            let grandparentURL = parentURL.deletingLastPathComponent()
+            if directoryContainsFile(directory: grandparentURL, named: "settings.gradle") ||
+               directoryContainsFile(directory: grandparentURL, named: "settings.gradle.kts") {
+                return true
+            }
+        }
+
+        return false
     }
 
     func isValidiOSProject(buildFolder: URL) -> Bool {
