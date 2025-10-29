@@ -329,6 +329,14 @@ The app now includes all high-priority enhancements:
    - To 'checkmark.circle.fill' (valid, standard SF Symbol)
    - Shows green filled circle with checkmark when folder is selected
 
+5. ✅ **Enhancement: Comprehensive Deletion Logging**
+   - Added detailed OSLog logging to FileDeleter service
+   - Logs each folder deletion attempt with progress
+   - Logs full error details (domain, code, userInfo) on failure
+   - Logs summary of all failures with specific error messages
+   - Helps debug deletion issues via Console.app
+   - Filter logs: `process:ZeroDevCleaner category:deletion`
+
 #### Remaining Tasks:
 
 **Remaining Tasks in Phase 7** (4-6 hours):
