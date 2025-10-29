@@ -8,6 +8,7 @@
 import XCTest
 @testable import ZeroDevCleaner
 
+@MainActor
 final class ProjectValidatorTests: XCTestCase {
     var sut: ProjectValidator!
     var tempDirectory: URL!

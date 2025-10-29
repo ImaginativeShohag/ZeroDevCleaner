@@ -8,6 +8,7 @@
 import XCTest
 @testable import ZeroDevCleaner
 
+@MainActor
 final class ModelTests: XCTestCase {
 
     // MARK: - ProjectType Tests
