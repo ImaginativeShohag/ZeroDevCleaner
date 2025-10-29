@@ -63,6 +63,27 @@ struct MainView: View {
                     .disabled(viewModel.isScanning)
                 }
             }
+
+            // Recent folders menu
+            if !viewModel.recentFoldersManager.recentFolders.isEmpty {
+                ToolbarItem(placement: .automatic) {
+                    Menu {
+                        ForEach(viewModel.recentFoldersManager.recentFolders, id: \.self) { url in
+                            Button(url.lastPathComponent) {
+                                viewModel.selectFolder(at: url)
+                            }
+                        }
+
+                        Divider()
+
+                        Button("Clear Recent Folders") {
+                            viewModel.recentFoldersManager.clearAll()
+                        }
+                    } label: {
+                        Label("Recent", systemImage: "clock.arrow.circlepath")
+                    }
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectFolder)) { _ in
             viewModel.selectFolder()

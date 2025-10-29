@@ -162,6 +162,11 @@ struct ScanResultsView: View {
                     Button("Show in Finder") {
                         onShowInFinder(folder)
                     }
+
+                    Button("Copy Path") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(folder.path.path, forType: .string)
+                    }
                 }
             } primaryAction: { items in
                 // Double-click action

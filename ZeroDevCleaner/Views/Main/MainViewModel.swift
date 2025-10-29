@@ -83,6 +83,7 @@ final class MainViewModel {
 
     private let scanner: FileScannerProtocol
     private let deleter: FileDeleterProtocol
+    let recentFoldersManager = RecentFoldersManager()
 
     // MARK: - Private Properties
 
@@ -170,6 +171,9 @@ final class MainViewModel {
                 // Update results on main actor
                 self.scanResults = results
                 self.isScanning = false
+
+                // Add to recent folders on successful scan
+                self.recentFoldersManager.addFolder(folder)
             } catch {
                 self.handleError(error)
                 self.isScanning = false
