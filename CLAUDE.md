@@ -337,6 +337,14 @@ The app now includes all high-priority enhancements:
    - Helps debug deletion issues via Console.app
    - Filter logs: `process:ZeroDevCleaner category:deletion`
 
+6. ✅ **Critical Fix: Deletion Permission Issues**
+   - Fixed "couldn't be moved to the trash because you don't have permission" error
+   - Switched from `FileManager.trashItem()` to `NSWorkspace.recycle()`
+   - NSWorkspace.recycle() properly handles macOS permissions
+   - Works correctly with Full Disk Access
+   - Added readable file check before deletion
+   - Validates trashed URL is returned from recycle operation
+
 #### Remaining Tasks:
 
 **Remaining Tasks in Phase 7** (4-6 hours):
