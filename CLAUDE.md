@@ -324,9 +324,10 @@ The app now includes all high-priority enhancements:
    - Fix: Only show error if actually scanning (wasScanning check)
 
 4. ✅ **Bug Fix: Invalid SF Symbol**
-   - Fixed invalid SF Symbol 'folder.fill.badge.checkmark'
-   - Replaced with valid 'folder.badge.checkmark'
-   - Symbol appears in EmptyStateView when folder is selected
+   - Fixed invalid SF Symbol in EmptyStateView
+   - Changed from 'folder.fill.badge.checkmark' (invalid)
+   - To 'checkmark.circle.fill' (valid, standard SF Symbol)
+   - Shows green filled circle with checkmark when folder is selected
 
 #### Remaining Tasks:
 
