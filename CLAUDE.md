@@ -293,20 +293,27 @@ The app now includes all high-priority enhancements:
 
 ---
 
-## Next Steps: Phase 7 - Testing & QA
+## Next Steps: Phase 7 - Testing & QA (In Progress)
 
 ### 🔵 Current Work - Phase 7: Testing & Quality Assurance
 
-The app is now feature-complete with robust error handling. Next priority is comprehensive testing to ensure reliability.
+**Progress**: Task 7.1 Complete ✅
 
-**Remaining Tasks in Phase 7** (8-12 hours):
+#### Completed Tasks:
 
-1. **Task 7.1: Expand Unit Tests** (3 hours)
-   - Test MVP enhancements
-   - Test error handling
-   - Improve code coverage to >85%
+1. ✅ **Task 7.1: Expand Unit Tests** (2 hours)
+   - Added 33 new unit tests
+   - MainViewModelTests: 15 new tests for filters, errors, concurrency
+   - ErrorTests: 12 new tests for all error types
+   - RecentFoldersManagerTests: 6 new tests with real file system
+   - Total test count: 50+ tests passing
+   - Comprehensive coverage of Phase 6 features
 
-2. **Task 7.2: Integration Tests** (3 hours)
+#### Remaining Tasks:
+
+**Remaining Tasks in Phase 7** (6-10 hours):
+
+2. **Task 7.2: Integration Tests** (3 hours) - NEXT
    - Test complete scan-to-delete flows
    - Test error scenarios end-to-end
 
@@ -323,8 +330,9 @@ The app is now feature-complete with robust error handling. Next priority is com
 
 ### 📋 Remaining Work (Per docs/13-remaining-features-plan.md)
 
-#### 🔴 Must Have (For Release) - 14-20 hours remaining
-1. **Phase 7: Testing & QA** (8-12 hours) - NEXT
+#### 🔴 Must Have (For Release) - 12-18 hours remaining
+1. **Phase 7: Testing & QA** (6-10 hours remaining) - IN PROGRESS
+   - Task 7.2, 7.3, 7.4 (see above)
 2. **Phase 10: Documentation & Release** (6-8 hours)
    - Code documentation
    - User guide
