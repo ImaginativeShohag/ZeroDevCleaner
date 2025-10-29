@@ -65,6 +65,7 @@ struct MainView: View {
         .sheet(isPresented: $viewModel.showDeletionConfirmation) {
             DeletionConfirmationView(
                 foldersToDelete: viewModel.selectedFolders,
+                staticLocationsToDelete: viewModel.selectedStaticLocations,
                 totalSize: viewModel.formattedSelectedSize,
                 onConfirm: { viewModel.confirmDeletion() },
                 onCancel: { viewModel.showDeletionConfirmation = false }
@@ -75,7 +76,7 @@ struct MainView: View {
                 currentItem: viewModel.currentDeletionItem,
                 progress: viewModel.deletionProgress,
                 currentIndex: viewModel.deletedItemCount,
-                totalItems: viewModel.selectedFolders.count,
+                totalItems: viewModel.totalSelectedCount,
                 deletedSize: viewModel.deletedSize,
                 totalSize: viewModel.selectedSize,
                 canCancel: false,

@@ -140,10 +140,22 @@ final class MainViewModel {
     /// Total size of items deleted so far
     var deletedSize: Int64 = 0
 
+    // MARK: - Static Locations
+
+    /// Static locations (DerivedData, caches, etc.)
+    var staticLocations: [StaticLocation] = []
+
+    /// Whether to include static locations in results
+    var includeStaticLocations: Bool = true
+
+    /// Whether static location scan is in progress
+    var isScanningStatic: Bool = false
+
     // MARK: - Dependencies
 
     private let scanner: FileScannerProtocol
     private let deleter: FileDeleterProtocol
+    private let staticScanner: StaticLocationScannerProtocol
     let recentFoldersManager = RecentFoldersManager()
 
     // MARK: - Private Properties
@@ -154,10 +166,12 @@ final class MainViewModel {
 
     init(
         scanner: FileScannerProtocol,
-        deleter: FileDeleterProtocol
+        deleter: FileDeleterProtocol,
+        staticScanner: StaticLocationScannerProtocol
     ) {
         self.scanner = scanner
         self.deleter = deleter
+        self.staticScanner = staticScanner
     }
 
     /// Convenience initializer with default dependencies
@@ -169,8 +183,9 @@ final class MainViewModel {
             sizeCalculator: sizeCalculator
         )
         let deleter = FileDeleter()
+        let staticScanner = StaticLocationScanner()
 
-        self.init(scanner: scanner, deleter: deleter)
+        self.init(scanner: scanner, deleter: deleter, staticScanner: staticScanner)
     }
 
     // MARK: - Folder Selection
@@ -319,6 +334,47 @@ final class MainViewModel {
         }
     }
 
+    /// Scans static locations (DerivedData, caches, etc.)
+    func scanStaticLocations() {
+        guard !isScanningStatic else {
+            Logger.scanning.warning("Static scan already in progress")
+            return
+        }
+
+        Logger.scanning.info("Starting static location scan")
+
+        isScanningStatic = true
+
+        Task {
+            do {
+                let types = StaticLocationType.allCases
+                let results = try await staticScanner.scanStaticLocations(types: types) { [weak self] path, count in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        self.currentScanPath = path
+                    }
+                }
+
+                self.staticLocations = results
+                self.isScanningStatic = false
+
+                let existingCount = results.filter(\.exists).count
+                Logger.scanning.info("Static scan complete. Found \(existingCount) of \(types.count) locations")
+            } catch {
+                Logger.scanning.error("Static scan failed: \(error.localizedDescription, privacy: .public)")
+                self.handleError(error)
+                self.isScanningStatic = false
+            }
+        }
+    }
+
+    /// Toggles selection for a specific static location
+    func toggleStaticLocationSelection(for location: StaticLocation) {
+        if let index = staticLocations.firstIndex(where: { $0.id == location.id }) {
+            staticLocations[index].isSelected.toggle()
+        }
+    }
+
     // MARK: - Selection Management
 
     /// Sorts results by the given column
@@ -371,6 +427,11 @@ final class MainViewModel {
         scanResults.filter(\.isSelected)
     }
 
+    /// Returns currently selected static locations
+    var selectedStaticLocations: [StaticLocation] {
+        staticLocations.filter(\.isSelected)
+    }
+
     /// Total number of folders found
     var totalFoldersCount: Int {
         scanResults.count
@@ -386,9 +447,11 @@ final class MainViewModel {
         ByteCountFormatter.string(fromByteCount: totalSpaceSize, countStyle: .file)
     }
 
-    /// Total size of selected folders
+    /// Total size of selected folders (including static locations)
     var selectedSize: Int64 {
-        selectedFolders.reduce(0) { $0 + $1.size }
+        let buildFoldersSize = selectedFolders.reduce(0) { $0 + $1.size }
+        let staticLocationsSize = selectedStaticLocations.reduce(0) { $0 + $1.size }
+        return buildFoldersSize + staticLocationsSize
     }
 
     /// Formatted selected size
@@ -396,11 +459,16 @@ final class MainViewModel {
         ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
 
+    /// Total count of selected items (build folders + static locations)
+    var totalSelectedCount: Int {
+        selectedFolders.count + selectedStaticLocations.count
+    }
+
     // MARK: - Deletion
 
     /// Shows deletion confirmation dialog
     func showDeleteConfirmation() {
-        guard !selectedFolders.isEmpty else { return }
+        guard !selectedFolders.isEmpty || !selectedStaticLocations.isEmpty else { return }
         showDeletionConfirmation = true
     }
 
@@ -410,10 +478,12 @@ final class MainViewModel {
         deleteSelectedFolders()
     }
 
-    /// Deletes selected folders
+    /// Deletes selected folders and static locations
     private func deleteSelectedFolders() {
         let foldersToDelete = selectedFolders
-        guard !foldersToDelete.isEmpty else { return }
+        let staticToDelete = selectedStaticLocations
+
+        guard !foldersToDelete.isEmpty || !staticToDelete.isEmpty else { return }
 
         // Prevent concurrent deletions
         guard !isDeleting else {
@@ -427,7 +497,8 @@ final class MainViewModel {
             return
         }
 
-        Logger.deletion.info("Starting deletion of \(foldersToDelete.count) folders")
+        let totalItemsToDelete = foldersToDelete.count + staticToDelete.count
+        Logger.deletion.info("Starting deletion of \(totalItemsToDelete) items (\(foldersToDelete.count) build folders, \(staticToDelete.count) static locations)")
 
         // Initialize progress tracking
         isDeleting = true
@@ -439,44 +510,64 @@ final class MainViewModel {
 
         Task {
             do {
-                try await deleter.delete(folders: foldersToDelete) { [weak self] current, total in
+                // Combine URLs from both sources
+                let allURLs = foldersToDelete.map { $0.path } + staticToDelete.map { $0.path }
+                let allItems: [(name: String, size: Int64)] =
+                    foldersToDelete.map { ($0.projectName, $0.size) } +
+                    staticToDelete.map { ($0.displayName, $0.size) }
+
+                try await deleter.delete(urls: allURLs) { [weak self] current, total in
                     guard let self else { return }
                     Task { @MainActor in
                         self.deletedItemCount = current
-                        if current > 0 && current <= foldersToDelete.count {
-                            let currentFolder = foldersToDelete[current - 1]
-                            self.currentDeletionItem = currentFolder.projectName
-                            // Calculate total deleted size from all completed folders
-                            self.deletedSize = foldersToDelete.prefix(current).reduce(0) { $0 + $1.size }
+                        if current > 0 && current <= allItems.count {
+                            let currentItem = allItems[current - 1]
+                            self.currentDeletionItem = currentItem.name
+                            // Calculate total deleted size from all completed items
+                            self.deletedSize = allItems.prefix(current).reduce(0) { $0 + $1.size }
                         }
                         self.deletionProgress = Double(current) / Double(total)
                     }
                 }
 
-                // All deletions succeeded - remove all deleted folders from results
+                // All deletions succeeded - remove all deleted items from results
                 for folder in foldersToDelete {
                     if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
                         self.scanResults.remove(at: index)
                     }
                 }
 
-                Logger.deletion.info("Successfully deleted \(foldersToDelete.count) folders")
+                for location in staticToDelete {
+                    if let index = self.staticLocations.firstIndex(where: { $0.id == location.id }) {
+                        self.staticLocations.remove(at: index)
+                    }
+                }
+
+                Logger.deletion.info("Successfully deleted \(totalItemsToDelete) items")
                 self.isDeleting = false
                 self.showDeletionProgress = false
             } catch let error as ZeroDevCleanerError {
                 // Handle partial deletion failure
                 if case .partialDeletionFailure(let failedURLs) = error {
-                    // Remove only successfully deleted folders
                     let failedSet = Set(failedURLs)
-                    let successfullyDeleted = foldersToDelete.filter { !failedSet.contains($0.path) }
 
-                    for folder in successfullyDeleted {
+                    // Remove only successfully deleted folders
+                    let successfulFolders = foldersToDelete.filter { !failedSet.contains($0.path) }
+                    for folder in successfulFolders {
                         if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
                             self.scanResults.remove(at: index)
                         }
                     }
 
-                    Logger.deletion.warning("Partial deletion failure: \(failedURLs.count) of \(foldersToDelete.count) failed")
+                    // Remove only successfully deleted static locations
+                    let successfulStatic = staticToDelete.filter { !failedSet.contains($0.path) }
+                    for location in successfulStatic {
+                        if let index = self.staticLocations.firstIndex(where: { $0.id == location.id }) {
+                            self.staticLocations.remove(at: index)
+                        }
+                    }
+
+                    Logger.deletion.warning("Partial deletion failure: \(failedURLs.count) of \(totalItemsToDelete) failed")
                 }
 
                 self.handleError(error)

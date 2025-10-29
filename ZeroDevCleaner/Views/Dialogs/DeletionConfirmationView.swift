@@ -9,9 +9,14 @@ import SwiftUI
 
 struct DeletionConfirmationView: View {
     let foldersToDelete: [BuildFolder]
+    let staticLocationsToDelete: [StaticLocation]
     let totalSize: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
+
+    private var totalItemCount: Int {
+        foldersToDelete.count + staticLocationsToDelete.count
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -27,7 +32,7 @@ struct DeletionConfirmationView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("\(foldersToDelete.count) item\(foldersToDelete.count == 1 ? "" : "s") will be moved to Trash")
+                Text("\(totalItemCount) item\(totalItemCount == 1 ? "" : "s") will be moved to Trash")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -39,7 +44,22 @@ struct DeletionConfirmationView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(Array(foldersToDelete.prefix(10))) { folder in
+                        // Static locations first
+                        ForEach(Array(staticLocationsToDelete.prefix(5))) { location in
+                            HStack {
+                                Image(systemName: location.type.iconName)
+                                    .foregroundStyle(location.type.color)
+                                Text(location.displayName)
+                                    .font(.callout)
+                                Spacer()
+                                Text(location.formattedSize)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Then build folders
+                        ForEach(Array(foldersToDelete.prefix(10 - min(5, staticLocationsToDelete.count)))) { folder in
                             HStack {
                                 Image(systemName: folder.projectType.iconName)
                                     .foregroundStyle(folder.projectType.color)
@@ -52,8 +72,8 @@ struct DeletionConfirmationView: View {
                             }
                         }
 
-                        if foldersToDelete.count > 10 {
-                            Text("...and \(foldersToDelete.count - 10) more")
+                        if totalItemCount > 10 {
+                            Text("...and \(totalItemCount - 10) more")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                                 .italic()
@@ -127,6 +147,7 @@ struct DeletionConfirmationView: View {
                 lastModified: Date()
             )
         ],
+        staticLocationsToDelete: [],
         totalSize: "80 MB",
         onConfirm: {},
         onCancel: {}

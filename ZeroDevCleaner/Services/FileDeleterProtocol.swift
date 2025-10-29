@@ -20,4 +20,13 @@ protocol FileDeleterProtocol: Sendable {
         folders: [BuildFolder],
         progressHandler: DeletionProgressHandler?
     ) async throws
+
+    /// Deletes items at URLs by moving them to Trash
+    /// - Parameters:
+    ///   - urls: URLs to delete
+    ///   - progressHandler: Called with current index and total count
+    func delete(
+        urls: [URL],
+        progressHandler: DeletionProgressHandler?
+    ) async throws
 }

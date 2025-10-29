@@ -13,12 +13,122 @@ struct ScanResultsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Static Locations Section
+            if !viewModel.staticLocations.isEmpty || viewModel.isScanningStatic {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "externaldrive.fill")
+                            .foregroundStyle(.purple)
+                        Text("System Cache Locations")
+                            .font(.headline)
+
+                        Spacer()
+
+                        if viewModel.isScanningStatic {
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.trailing, 4)
+                        }
+
+                        Button(viewModel.isScanningStatic ? "Scanning..." : "Refresh") {
+                            viewModel.scanStaticLocations()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isScanningStatic)
+                    }
+
+                    // Static locations mini table
+                    if !viewModel.staticLocations.isEmpty {
+                        VStack(spacing: 4) {
+                            ForEach(viewModel.staticLocations) { location in
+                                HStack(spacing: 12) {
+                                    Toggle("", isOn: Binding(
+                                        get: { location.isSelected },
+                                        set: { _ in viewModel.toggleStaticLocationSelection(for: location) }
+                                    ))
+                                    .toggleStyle(.checkbox)
+                                    .labelsHidden()
+                                    .disabled(!location.exists)
+
+                                    Image(systemName: location.type.iconName)
+                                        .foregroundStyle(location.type.color)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(location.displayName)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        Text(location.type.description)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if location.exists {
+                                        HStack(spacing: 8) {
+                                            Text(location.formattedSize)
+                                                .font(.subheadline)
+                                                .monospacedDigit()
+                                                .foregroundStyle(.secondary)
+
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(.green)
+                                                .font(.caption)
+                                        }
+                                    } else {
+                                        Text("Not found")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                                .background(location.exists ? Color(nsColor: .controlBackgroundColor) : Color.clear)
+                                .cornerRadius(6)
+                                .opacity(location.exists ? 1.0 : 0.5)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.top, 8)
+
+                Divider()
+                    .padding(.vertical, 8)
+            } else {
+                // Show button to scan static locations if not yet scanned
+                HStack {
+                    Image(systemName: "externaldrive.fill")
+                        .foregroundStyle(.purple)
+                    Text("Want to check system caches?")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Button("Scan System Caches") {
+                        viewModel.scanStaticLocations()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Spacer()
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.top, 8)
+            }
+
             // Enhanced Summary Card
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "chart.bar.fill")
                         .foregroundStyle(.blue)
-                    Text("Scan Results")
+                    Text("Project Build Folders")
                         .font(.headline)
                     Spacer()
                 }
