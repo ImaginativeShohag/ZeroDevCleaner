@@ -10,31 +10,29 @@
 - ✅ Full UI with filters, keyboard shortcuts, drag & drop
 - ✅ Error handling & comprehensive logging
 - ✅ 60+ tests passing
+- ✅ Static cache locations support (DerivedData, Gradle, CocoaPods, npm, yarn, Carthage)
 
 ---
 
 ## 🎯 Next Priority: New Feature Additions
 
-### 🔥 HIGH PRIORITY: Core Feature Enhancements (12-16 hours)
+### 🔥 HIGH PRIORITY: Core Feature Enhancements (7-11 hours remaining)
 
-**These tasks have been prioritized and moved to the front:**
+**Feature Status:**
 
-#### 1. Known Static Directories Support (4-5 hours)
+#### 1. ✅ Known Static Directories Support (COMPLETE!)
 **Goal**: Add support for common static build directories that don't require scanning
 
-**Directories to support:**
-- **DerivedData** (Xcode): `~/Library/Developer/Xcode/DerivedData`
-- **Gradle Cache** (Android): `~/.gradle/caches`
-- **CocoaPods** (iOS): `~/Library/Caches/CocoaPods`
-- **npm/yarn** cache: `~/.npm`, `~/.yarn/cache`
-- **Carthage**: `~/Library/Caches/org.carthage.CarthageKit`
+**Completed Features:**
+- ✅ StaticLocation model with 6 cache types (DerivedData, Gradle, CocoaPods, npm, yarn, Carthage)
+- ✅ StaticLocationScanner service for scanning static directories
+- ✅ UI section in ScanResultsView to display static locations
+- ✅ Integration with deletion flow (both build folders and static locations)
+- ✅ Refactored FileDeleter to support URL-based deletion
+- ✅ Shows existence status and size for each cache location
+- ✅ Allows selective deletion of static locations
 
-**Implementation:**
-- Create StaticLocation model
-- Add StaticLocationScanner service
-- Update UI to show both scanned and static locations
-- Add toggle to include/exclude static locations
-- Calculate sizes for these directories
+**Commit**: `065ea02` - feat: add static cache locations support
 
 #### 2. Settings Panel for Multiple Scan Locations (4-6 hours)
 **Goal**: Let users configure multiple folders to scan instead of selecting one at a time
