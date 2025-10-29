@@ -125,6 +125,9 @@ final class MainViewModel {
     /// Whether to show permission error alert (special handling)
     var showPermissionError: Bool = false
 
+    /// Whether to show deletion confirmation dialog
+    var showDeletionConfirmation: Bool = false
+
     // MARK: - Dependencies
 
     private let scanner: FileScannerProtocol
@@ -383,8 +386,20 @@ final class MainViewModel {
 
     // MARK: - Deletion
 
+    /// Shows deletion confirmation dialog
+    func showDeleteConfirmation() {
+        guard !selectedFolders.isEmpty else { return }
+        showDeletionConfirmation = true
+    }
+
+    /// Confirms deletion and starts the delete process
+    func confirmDeletion() {
+        showDeletionConfirmation = false
+        deleteSelectedFolders()
+    }
+
     /// Deletes selected folders
-    func deleteSelectedFolders() {
+    private func deleteSelectedFolders() {
         let foldersToDelete = selectedFolders
         guard !foldersToDelete.isEmpty else { return }
 

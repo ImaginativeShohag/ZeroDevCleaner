@@ -62,6 +62,14 @@ struct MainView: View {
         } message: {
             Text("ZeroDevCleaner cannot access this folder without Full Disk Access permission.\n\nTo grant access:\n1. Click 'Open System Settings'\n2. Click 'Show App in Finder' to locate ZeroDevCleaner\n3. In System Settings, click the '+' button under Full Disk Access\n4. Drag ZeroDevCleaner from Finder to the list, or navigate to select it\n5. Make sure the checkbox next to ZeroDevCleaner is enabled\n6. Quit and restart this app\n\n⚠️ You must restart the app after granting permission!")
         }
+        .sheet(isPresented: $viewModel.showDeletionConfirmation) {
+            DeletionConfirmationView(
+                foldersToDelete: viewModel.selectedFolders,
+                totalSize: viewModel.formattedSelectedSize,
+                onConfirm: { viewModel.confirmDeletion() },
+                onCancel: { viewModel.showDeletionConfirmation = false }
+            )
+        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button("Select Folder") {
@@ -124,7 +132,7 @@ struct MainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deleteSelected)) { _ in
             if !viewModel.selectedFolders.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
-                viewModel.deleteSelectedFolders()
+                viewModel.showDeleteConfirmation()
             }
         }
     }

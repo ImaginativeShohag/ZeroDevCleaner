@@ -87,7 +87,7 @@ struct ScanResultsView: View {
 
                 Spacer()
 
-                Button("Remove Selected", action: viewModel.deleteSelectedFolders)
+                Button("Remove Selected", action: viewModel.showDeleteConfirmation)
                     .buttonStyle(.borderedProminent)
                     .disabled(selectedCount == 0)
             }
