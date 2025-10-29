@@ -323,6 +323,11 @@ The app now includes all high-priority enhancements:
    - Was showing error whenever scanResults.isEmpty
    - Fix: Only show error if actually scanning (wasScanning check)
 
+4. ✅ **Bug Fix: Invalid SF Symbol**
+   - Fixed invalid SF Symbol 'folder.fill.badge.checkmark'
+   - Replaced with valid 'folder.badge.checkmark'
+   - Symbol appears in EmptyStateView when folder is selected
+
 #### Remaining Tasks:
 
 **Remaining Tasks in Phase 7** (4-6 hours):
