@@ -33,7 +33,9 @@ struct MainView: View {
                     onDeselectAll: viewModel.deselectAll,
                     onDelete: viewModel.deleteSelectedFolders,
                     onShowInFinder: viewModel.showInFinder,
-                    selectedSize: viewModel.formattedSelectedSize
+                    selectedSize: viewModel.formattedSelectedSize,
+                    totalCount: viewModel.totalFoldersCount,
+                    totalSize: viewModel.formattedTotalSize
                 )
             }
         }

@@ -181,6 +181,21 @@ final class MainViewModel {
         scanResults.filter(\.isSelected)
     }
 
+    /// Total number of folders found
+    var totalFoldersCount: Int {
+        scanResults.count
+    }
+
+    /// Total size of all folders
+    var totalSpaceSize: Int64 {
+        scanResults.reduce(0) { $0 + $1.size }
+    }
+
+    /// Formatted total size
+    var formattedTotalSize: String {
+        ByteCountFormatter.string(fromByteCount: totalSpaceSize, countStyle: .file)
+    }
+
     /// Total size of selected folders
     var selectedSize: Int64 {
         selectedFolders.reduce(0) { $0 + $1.size }

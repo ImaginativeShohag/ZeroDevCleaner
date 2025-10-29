@@ -15,35 +15,91 @@ struct ScanResultsView: View {
     let onDelete: () -> Void
     let onShowInFinder: (BuildFolder) -> Void
     let selectedSize: String
+    let totalCount: Int
+    let totalSize: String
 
     var body: some View {
         VStack(spacing: 0) {
-            // Summary Card
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(results.count) build folders found")
+            // Enhanced Summary Card
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "chart.bar.fill")
+                        .foregroundStyle(.blue)
+                    Text("Scan Results")
                         .font(.headline)
-                    Text("Selected: \(selectedCount) (\(selectedSize))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
 
-                Spacer()
+                HStack(spacing: 24) {
+                    // Total found
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Total Found")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Image(systemName: "folder.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("\(totalCount) folders")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text("•")
+                                .foregroundStyle(.tertiary)
+                            Text(totalSize)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
 
+                    Spacer()
+
+                    // Selected
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Selected")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                            Text("\(selectedCount) folders")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text("•")
+                                .foregroundStyle(.tertiary)
+                            Text(selectedSize)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                }
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(8)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            // Action Buttons
+            HStack {
                 HStack(spacing: 12) {
                     Button("Select All", action: onSelectAll)
                         .buttonStyle(.bordered)
 
                     Button("Deselect All", action: onDeselectAll)
                         .buttonStyle(.bordered)
-
-                    Button("Remove Selected", action: onDelete)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(selectedCount == 0)
                 }
+
+                Spacer()
+
+                Button("Remove Selected", action: onDelete)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedCount == 0)
             }
-            .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
+            .padding(.horizontal)
+            .padding(.vertical, 8)
 
             Divider()
 
@@ -114,6 +170,8 @@ struct ScanResultsView: View {
         onDeselectAll: {},
         onDelete: {},
         onShowInFinder: { _ in },
-        selectedSize: "100 MB"
+        selectedSize: "100 MB",
+        totalCount: 1,
+        totalSize: "100 MB"
     )
 }
