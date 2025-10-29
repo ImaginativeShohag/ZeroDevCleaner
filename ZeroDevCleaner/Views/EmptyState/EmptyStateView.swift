@@ -20,7 +20,7 @@ struct EmptyStateView: View {
         VStack(spacing: 24) {
             if let folder = selectedFolder {
                 // Folder selected - ready to scan
-                Image(systemName: "folder.fill.badge.checkmark")
+                Image(systemName: "folder.badge.checkmark")
                     .font(.system(size: 64))
                     .foregroundStyle(.green)
 
