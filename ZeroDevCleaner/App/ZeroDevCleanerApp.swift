@@ -11,8 +11,7 @@ import SwiftUI
 struct ZeroDevCleanerApp: App {
     var body: some Scene {
         WindowGroup {
-            // Placeholder - will be replaced with MainView in Phase 4
-            PlaceholderView()
+            MainView()
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -21,33 +20,4 @@ struct ZeroDevCleanerApp: App {
             CommandGroup(replacing: .newItem) { }
         }
     }
-}
-
-// Temporary placeholder view
-struct PlaceholderView: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.green)
-
-            Text("ZeroDevCleaner")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-
-            Text("Foundation phase complete")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            Text("Ready for Phase 2: Core Services")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-#Preview {
-    PlaceholderView()
 }
