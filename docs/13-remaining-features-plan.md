@@ -5,8 +5,8 @@
 This document provides a comprehensive roadmap for completing ZeroDevCleaner. It's designed for AI agents (like Claude) to pick up and continue development autonomously.
 
 **Last Updated**: 2025-10-29
-**Current Status**: Phase 4 (Basic UI) Complete
-**Next Milestone**: Enhanced MVP with all high-value features
+**Current Status**: Phase 4B (MVP Enhancements) Complete
+**Next Critical Task**: Task 6.2 - Permission Handling & Full Disk Access (MUST DO FIRST)
 
 ---
 
@@ -42,626 +42,53 @@ This document provides a comprehensive roadmap for completing ZeroDevCleaner. It
 - ScanResultsView with table, selection controls, and action buttons
 - Basic summary showing selected count and size
 
+#### Phase 4B: MVP Enhancements
+- Show in Finder (context menu + double-click)
+- Drag & Drop folder selection with visual feedback
+- Keyboard shortcuts (Cmd+O, Cmd+R, Cmd+A, Cmd+Shift+A, Delete)
+- Enhanced summary card with totals and selection stats
+- Quick filter by project type (All/Android/iOS/Swift Package)
+- Recent folders list with UserDefaults persistence
+- Copy path to clipboard
+
 **Test Status**: 40+ tests passing, Swift 6 strict concurrency enabled
 
 ---
 
 ## Priority-Based Implementation Plan
 
-### 🔴 Phase 4B: MVP Enhancements (HIGH PRIORITY)
+### ✅ Phase 4B: MVP Enhancements (COMPLETE)
 
-**Goal**: Transform the functional MVP into a polished, user-friendly application
+**Status**: ✅ All 7 features implemented and tested
+**Time Spent**: ~6 hours
+**Completion Date**: 2025-10-29
+
+All high-priority MVP enhancements have been successfully implemented:
+1. ✅ Show in Finder (context menu + double-click)
+2. ✅ Drag & Drop folder selection
+3. ✅ Keyboard shortcuts
+4. ✅ Enhanced summary card
+5. ✅ Quick filter by project type
+6. ✅ Recent folders list
+7. ✅ Copy path to clipboard
+
+See commits: cb1effe, a4ad3a5, ee3a971, 697d0f3
+
+---
+
+### 🔴 Phase 6: Error Handling & Robustness (CRITICAL PRIORITY - START HERE)
+
+**Goal**: Handle all error cases gracefully and make the app production-ready
 **Estimated Time**: 6-8 hours
-**Priority**: CRITICAL for user experience
-
-These enhancements were identified in `docs/06-mvp-enhancements.md` as high-value, low-effort features that significantly improve UX.
-
----
-
-#### Task 4B.1: Show in Finder (Context Menu + Double-Click)
-
-**Time Estimate**: 45 minutes
-**Priority**: HIGH
-**Value**: HIGH
-
-**Description**: Allow users to reveal build folders in Finder for inspection before deletion.
-
-**Implementation Steps**:
-
-1. **Add Context Menu to Table Rows** (20 min)
-   - Modify `ScanResultsView.swift` table
-   - Add `.contextMenu` modifier to each row
-   - Create "Show in Finder" menu item
-   - Use `NSWorkspace.shared.selectFile(_:inFileViewerRootedAtPath:)`
-
-2. **Add Double-Click Handler** (15 min)
-   - Add `.onTapGesture(count: 2)` to table rows
-   - Call same "Show in Finder" functionality
-   - This is natural macOS behavior users expect
-
-3. **Add Helper Method to MainViewModel** (10 min)
-   - Create `func showInFinder(folder: BuildFolder)`
-   - Mark as `@MainActor` isolated
-   - Handle cases where folder no longer exists
-
-**Code Example**:
-```swift
-// In MainViewModel.swift
-@MainActor
-func showInFinder(folder: BuildFolder) {
-    NSWorkspace.shared.selectFile(
-        folder.path.path,
-        inFileViewerRootedAtPath: folder.path.deletingLastPathComponent().path
-    )
-}
-
-// In ScanResultsView.swift
-Table(results) {
-    // ... columns ...
-}
-.contextMenu(forSelectionType: BuildFolder.ID.self) { items in
-    if let item = items.first {
-        Button("Show in Finder") {
-            if let folder = results.first(where: { $0.id == item }) {
-                // Call ViewModel method
-            }
-        }
-    }
-}
-```
-
-**Acceptance Criteria**:
-- Right-click on any row shows "Show in Finder" option
-- Double-clicking a row opens Finder at that location
-- Folder is highlighted in Finder
-- No crashes if folder no longer exists
-
-**Testing**:
-- Manual test: Right-click several rows
-- Manual test: Double-click several rows
-- Manual test: Try after folder has been deleted
-
----
-
-#### Task 4B.2: Drag & Drop Folder Selection
-
-**Time Estimate**: 1.5 hours
-**Priority**: HIGH
-**Value**: HIGH
-
-**Description**: Allow users to drag a folder from Finder onto the app window to select it for scanning.
-
-**Implementation Steps**:
-
-1. **Add Drop Handling to EmptyStateView** (30 min)
-   - Add `.onDrop(of: [.fileURL])` modifier
-   - Handle `NSItemProvider` with async loading
-   - Validate dropped item is a directory
-   - Call ViewModel's folder selection method
-
-2. **Add Drop Handling to MainView** (30 min)
-   - Add drop zone when not scanning
-   - Visual feedback during drag (highlight border)
-   - Use `.dropDestination` or `.onDrop` modifier
-   - Extract URL from dropped item
-
-3. **Add Visual Feedback** (20 min)
-   - Change background color on drag hover
-   - Add border or overlay indicator
-   - Show "Drop to scan" text
-
-4. **Update MainViewModel** (10 min)
-   - Create `func selectFolder(at url: URL)`
-   - Validate directory exists and is accessible
-   - Update `selectedFolder` property
-   - Consider triggering automatic scan
-
-**Code Example**:
-```swift
-// In EmptyStateView.swift
-.onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-    guard let provider = providers.first else { return false }
-
-    Task {
-        guard let url = try? await provider.loadTransferable(type: URL.self) else {
-            return
-        }
-
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-              isDirectory.boolValue else {
-            return
-        }
-
-        await MainActor.run {
-            onFolderSelected(url)
-        }
-    }
-    return true
-}
-.background(isDropTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
-.overlay(
-    RoundedRectangle(cornerRadius: 8)
-        .stroke(isDropTargeted ? Color.accentColor : Color.clear, lineWidth: 2)
-)
-```
-
-**Acceptance Criteria**:
-- Can drag folder from Finder onto app
-- Drop zones show visual feedback during drag
-- Only accepts directories (not files)
-- Updates selected folder after drop
-- Shows error if dropped item is not a valid directory
-
-**Testing**:
-- Drag folder from Finder to EmptyStateView
-- Drag folder when results are showing
-- Try dragging a file (should reject)
-- Try dragging multiple items (should handle first folder)
-
----
-
-#### Task 4B.3: Keyboard Shortcuts
-
-**Time Estimate**: 1.5 hours
-**Priority**: HIGH
-**Value**: MEDIUM-HIGH
-
-**Description**: Add keyboard shortcuts for common actions to speed up workflow for power users.
-
-**Shortcuts to Implement**:
-- **Cmd+O**: Open folder selection dialog
-- **Cmd+R**: Start/restart scan
-- **Cmd+A**: Select all items
-- **Cmd+Shift+A**: Deselect all items
-- **Delete/Backspace**: Remove selected items (with confirmation)
-- **Space**: Toggle selection of focused item
-- **Cmd+W**: Close window (default)
-- **Cmd+Q**: Quit app (default)
-
-**Implementation Steps**:
-
-1. **Add Menu Bar Commands** (45 min)
-   - Use `.commands` modifier in `ZeroDevCleanerApp.swift`
-   - Create custom command groups
-   - Wire commands to ViewModel actions
-   - Disable commands based on state (e.g., can't scan while scanning)
-
-2. **Add Keyboard Shortcut Modifiers** (30 min)
-   - Add `.keyboardShortcut` to toolbar buttons
-   - Add shortcuts to context actions
-   - Ensure shortcuts work in all states
-
-3. **Handle Delete Key** (15 min)
-   - Add `.onDeleteCommand` modifier
-   - Trigger deletion confirmation
-   - Only works when items are selected
-
-**Code Example**:
-```swift
-// In ZeroDevCleanerApp.swift
-.commands {
-    CommandGroup(replacing: .newItem) { }
-
-    CommandMenu("Scan") {
-        Button("Select Folder...") {
-            // Trigger folder selection
-        }
-        .keyboardShortcut("o", modifiers: .command)
-
-        Button("Start Scan") {
-            // Trigger scan
-        }
-        .keyboardShortcut("r", modifiers: .command)
-        .disabled(viewModel.selectedFolder == nil || viewModel.isScanning)
-    }
-
-    CommandMenu("Selection") {
-        Button("Select All") {
-            // Select all
-        }
-        .keyboardShortcut("a", modifiers: .command)
-
-        Button("Deselect All") {
-            // Deselect all
-        }
-        .keyboardShortcut("a", modifiers: [.command, .shift])
-
-        Button("Remove Selected") {
-            // Delete
-        }
-        .keyboardShortcut(.delete, modifiers: [])
-    }
-}
-
-// In ScanResultsView.swift
-.onDeleteCommand {
-    if selectedCount > 0 {
-        onDelete()
-    }
-}
-```
-
-**Acceptance Criteria**:
-- All shortcuts work as specified
-- Shortcuts are disabled when actions unavailable
-- Shortcuts shown in menu bar
-- No conflicts with system shortcuts
-- Delete key triggers confirmation dialog
-
-**Testing**:
-- Test each shortcut in different app states
-- Verify shortcuts disabled appropriately
-- Check for conflicts with system shortcuts
-
----
-
-#### Task 4B.4: Enhanced Total Space Summary Card
-
-**Time Estimate**: 45 minutes
-**Priority**: HIGH
-**Value**: HIGH
-
-**Description**: Make the summary more prominent with a visual card showing total recoverable space.
-
-**Current State**: Basic summary shows "X selected (Y MB)" at bottom of results.
-
-**Enhanced Design**:
-```
-┌─────────────────────────────────────────────────────────┐
-│  📊 Scan Results                                         │
-│  ┌───────────────────────────────────────────────────┐ │
-│  │ Found: 30 folders • Total: 4.2 GB                  │ │
-│  │ Selected: 21 folders (1.2 GB)                      │ │
-│  └───────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Implementation Steps**:
-
-1. **Add Computed Properties to MainViewModel** (15 min)
-   - `var totalFoldersCount: Int`
-   - `var totalSpaceSize: Int64`
-   - `var formattedTotalSize: String`
-   - Already has `formattedSelectedSize`
-
-2. **Create Summary Card Component** (20 min)
-   - Create `ScanSummaryCard.swift`
-   - Display found count and total size
-   - Display selected count and selected size
-   - Use prominent styling with background color
-
-3. **Integrate into ScanResultsView** (10 min)
-   - Add card above table
-   - Update dynamically as selection changes
-   - Proper spacing and styling
-
-**Code Example**:
-```swift
-// In MainViewModel.swift
-var totalFoldersCount: Int {
-    scanResults.count
-}
-
-var totalSpaceSize: Int64 {
-    scanResults.reduce(0) { $0 + $1.size }
-}
-
-var formattedTotalSize: String {
-    ByteCountFormatter.string(fromByteCount: totalSpaceSize, countStyle: .file)
-}
-
-// ScanSummaryCard.swift
-struct ScanSummaryCard: View {
-    let totalCount: Int
-    let totalSize: String
-    let selectedCount: Int
-    let selectedSize: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "chart.bar.fill")
-                Text("Scan Results")
-                    .font(.headline)
-            }
-
-            HStack {
-                Label("\(totalCount) folders", systemImage: "folder.fill")
-                Spacer()
-                Text(totalSize)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Label("\(selectedCount) selected", systemImage: "checkmark.circle.fill")
-                Spacer()
-                Text(selectedSize)
-                    .font(.headline)
-                    .foregroundStyle(.blue)
-            }
-        }
-        .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(8)
-    }
-}
-```
-
-**Acceptance Criteria**:
-- Card shows total found count and size
-- Card shows selected count and size
-- Updates dynamically as selection changes
-- Visually prominent and easy to read
-- Proper formatting of sizes (GB, MB, etc.)
-
-**Testing**:
-- Verify calculations are correct
-- Change selections and verify updates
-- Test with various size ranges
-
----
-
-#### Task 4B.5: Quick Filter by Project Type
-
-**Time Estimate**: 1.5 hours
-**Priority**: MEDIUM
-**Value**: MEDIUM
-
-**Description**: Add filter buttons to show only specific project types (Android, iOS, Swift Package, or All).
-
-**UI Design**:
-```
-Filter: [All ✓] [🤖 Android] [🍎 iOS] [📦 Swift Package]
-```
-
-**Implementation Steps**:
-
-1. **Add Filter State to MainViewModel** (20 min)
-   - Add `enum FilterType: CaseIterable { case all, android, iOS, swiftPackage }`
-   - Add `var currentFilter: FilterType = .all`
-   - Add computed property `var filteredResults: [BuildFolder]`
-   - Filter based on `currentFilter`
-
-2. **Create Filter Button Component** (30 min)
-   - Create `ProjectTypeFilterView.swift`
-   - Segmented control or button group
-   - Show icon + label for each type
-   - Highlight selected filter
-
-3. **Integrate into ScanResultsView** (20 min)
-   - Add filter view below summary card
-   - Wire to ViewModel filter state
-   - Update table to show filtered results
-
-4. **Update Selection Count** (20 min)
-   - Selected count should reflect filtered view
-   - Select All should only select filtered items
-   - Deselect All should only deselect filtered items
-
-**Code Example**:
-```swift
-// In MainViewModel.swift
-enum FilterType: String, CaseIterable {
-    case all = "All"
-    case android = "Android"
-    case iOS = "iOS"
-    case swiftPackage = "Swift Package"
-}
-
-var currentFilter: FilterType = .all
-
-var filteredResults: [BuildFolder] {
-    guard currentFilter != .all else { return scanResults }
-
-    return scanResults.filter { folder in
-        switch currentFilter {
-        case .all: return true
-        case .android: return folder.projectType == .android
-        case .iOS: return folder.projectType == .iOS
-        case .swiftPackage: return folder.projectType == .swiftPackage
-        }
-    }
-}
-
-// ProjectTypeFilterView.swift
-struct ProjectTypeFilterView: View {
-    @Binding var selectedFilter: MainViewModel.FilterType
-
-    var body: some View {
-        Picker("Filter", selection: $selectedFilter) {
-            ForEach(MainViewModel.FilterType.allCases, id: \.self) { filter in
-                Label(filter.rawValue, systemImage: iconForFilter(filter))
-                    .tag(filter)
-            }
-        }
-        .pickerStyle(.segmented)
-    }
-
-    private func iconForFilter(_ filter: MainViewModel.FilterType) -> String {
-        switch filter {
-        case .all: return "square.grid.2x2"
-        case .android: return "android.circle.fill"  // or custom
-        case .iOS: return "apple.logo"
-        case .swiftPackage: return "shippingbox.fill"
-        }
-    }
-}
-```
-
-**Acceptance Criteria**:
-- Can filter by all project types
-- Filter updates results immediately
-- Selection operations work with filtered view
-- Filter state persists during session
-- Count and size reflect filtered results
-
-**Testing**:
-- Filter by each type
-- Select items and verify operations work
-- Switch filters and verify state is maintained
-
----
-
-#### Task 4B.6: Recent Folders List
-
-**Time Estimate**: 2 hours
-**Priority**: MEDIUM
-**Value**: MEDIUM
-
-**Description**: Remember last 5 scanned folders and provide quick access via dropdown menu.
-
-**Implementation Steps**:
-
-1. **Add UserDefaults Storage** (30 min)
-   - Create `RecentFoldersManager.swift`
-   - Use `@AppStorage` or UserDefaults
-   - Store array of URLs as Data (encoded)
-   - Limit to 5 most recent
-   - Remove duplicates
-   - Verify paths still exist before showing
-
-2. **Create Recent Folders Menu** (45 min)
-   - Add menu button to toolbar
-   - Show list of recent paths (shortened)
-   - Click to select and scan
-   - Option to clear recent folders
-
-3. **Update MainViewModel** (30 min)
-   - Add recent folder to list after scan
-   - Integrate with `RecentFoldersManager`
-   - Update UI when folder selected from recents
-
-4. **Handle Edge Cases** (15 min)
-   - Skip if folder no longer exists
-   - Handle permissions errors
-   - Show empty state if no recents
-
-**Code Example**:
-```swift
-// RecentFoldersManager.swift
-@Observable
-@MainActor
-final class RecentFoldersManager {
-    @AppStorage("recentFolders") private var recentFoldersData: Data = Data()
-
-    var recentFolders: [URL] {
-        get {
-            guard let decoded = try? JSONDecoder().decode([URL].self, from: recentFoldersData) else {
-                return []
-            }
-            // Filter out non-existent paths
-            return decoded.filter { FileManager.default.fileExists(atPath: $0.path) }
-        }
-        set {
-            // Keep only first 5 unique items
-            let unique = Array(Set(newValue)).prefix(5)
-            recentFoldersData = (try? JSONEncoder().encode(Array(unique))) ?? Data()
-        }
-    }
-
-    func addFolder(_ url: URL) {
-        var current = recentFolders
-        // Remove if exists, add to front
-        current.removeAll { $0 == url }
-        current.insert(url, at: 0)
-        recentFolders = current
-    }
-
-    func clearAll() {
-        recentFolders = []
-    }
-}
-
-// In MainView toolbar
-Menu {
-    ForEach(recentFoldersManager.recentFolders, id: \.self) { url in
-        Button(url.lastPathComponent) {
-            viewModel.selectFolder(at: url)
-            viewModel.startScan()
-        }
-    }
-
-    if !recentFoldersManager.recentFolders.isEmpty {
-        Divider()
-        Button("Clear Recent") {
-            recentFoldersManager.clearAll()
-        }
-    }
-} label: {
-    Label("Recent", systemImage: "clock.arrow.circlepath")
-}
-```
-
-**Acceptance Criteria**:
-- Remembers last 5 scanned folders
-- Shows in dropdown menu
-- Clicking selects and optionally starts scan
-- Removes non-existent paths automatically
-- Can clear recent folders list
-
-**Testing**:
-- Scan multiple folders and verify they appear
-- Verify limit of 5 items
-- Delete a folder and verify it's removed from list
-- Test clear functionality
-
----
-
-#### Task 4B.7: Copy Path to Clipboard
-
-**Time Estimate**: 30 minutes
-**Priority**: LOW-MEDIUM
-**Value**: MEDIUM
-
-**Description**: Allow users to copy full path of a build folder to clipboard.
-
-**Implementation Steps**:
-
-1. **Add to Context Menu** (15 min)
-   - Add "Copy Path" menu item
-   - Use `NSPasteboard.general.setString(_:forType:)`
-   - Show brief confirmation
-
-2. **Add Keyboard Shortcut** (Optional, 10 min)
-   - Cmd+C when row is focused
-   - Copy selected rows' paths
-
-3. **Show Confirmation** (5 min)
-   - Brief toast/banner message
-   - Or system sound
-
-**Code Example**:
-```swift
-// In MainViewModel.swift
-func copyPathToClipboard(folder: BuildFolder) {
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(folder.path.path, forType: .string)
-
-    // Optional: Show confirmation
-    // Could use a toast notification system
-}
-
-// In ScanResultsView context menu
-Button("Copy Path") {
-    if let folder = results.first(where: { $0.id == item }) {
-        // Call ViewModel method
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(folder.path.path, forType: .string)
-    }
-}
-.keyboardShortcut("c", modifiers: .command)
-```
-
-**Acceptance Criteria**:
-- Right-click shows "Copy Path" option
-- Path is copied to clipboard correctly
-- Works with Cmd+C shortcut (optional)
-- Brief confirmation shown
-
-**Testing**:
-- Copy path and paste into text editor
-- Verify full absolute path is copied
+**Priority**: CRITICAL (essential for app to function on macOS)
+
+**⚠️ IMPORTANT**: Task 6.2 (Permission Handling) should be implemented FIRST as the app cannot function without Full Disk Access on macOS. This is a blocking issue for any real-world usage.
+
+**📋 Phase 6 Tasks** (listed below, after Phase 5):
+- Task 6.2: Permission Handling & Full Disk Access ⚠️ **DO THIS FIRST** (2h) - See line ~465
+- Task 6.1: Comprehensive Error Handling (2h)
+- Task 6.3: Handle Edge Cases (2-3h)
+- Task 6.4: Logging & Debugging Support (1h)
 
 ---
 
@@ -1033,11 +460,115 @@ struct DeletionProgressView: View {
 
 ---
 
-### 🟢 Phase 6: Error Handling & Robustness (MEDIUM-HIGH PRIORITY)
+### 🔴 Phase 6: Error Handling & Robustness (CRITICAL PRIORITY)
 
 **Goal**: Handle all error cases gracefully and make the app production-ready
 **Estimated Time**: 6-8 hours
-**Priority**: MEDIUM-HIGH (critical for stability)
+**Priority**: CRITICAL (essential for app to function on macOS)
+
+**⚠️ IMPORTANT**: Task 6.2 (Permission Handling) should be implemented FIRST as the app cannot function without Full Disk Access on macOS. This is a blocking issue for any real-world usage.
+
+---
+
+#### Task 6.2: Permission Handling & Full Disk Access ⚠️ IMPLEMENT FIRST
+
+**Time Estimate**: 2 hours
+**Priority**: CRITICAL
+**Value**: CRITICAL
+
+**⚠️ WHY THIS IS CRITICAL**: On macOS, the app needs Full Disk Access permission to scan most user directories. Without this permission:
+- The app cannot scan ~/Library, ~/Documents, or most development folders
+- Users will get confusing "permission denied" errors
+- The app appears broken and unusable
+- This must be implemented before any production use
+
+**Description**: Properly detect and handle Full Disk Access permission with user-friendly guidance.
+
+**Implementation Steps**:
+
+1. **Create Permission Checker** (45 min)
+   - Create `PermissionManager.swift` in Utilities folder
+   - Check if app has Full Disk Access
+   - Method to open System Settings to correct pane
+   - Singleton pattern with @MainActor
+
+2. **Add Permission Check on First Scan** (45 min)
+   - Check before starting scan in MainViewModel
+   - Show helpful dialog if denied with clear instructions
+   - Link to System Settings with one-click action
+   - Don't show scary technical errors
+
+3. **Handle Permission Errors During Scan** (30 min)
+   - Skip inaccessible folders gracefully
+   - Track skipped folders
+   - Show summary: "Scanned X folders, skipped Y due to permissions"
+   - Offer to open System Settings from results
+
+**Code Example**:
+```swift
+@MainActor
+final class PermissionManager: Sendable {
+    static let shared = PermissionManager()
+
+    private init() {}
+
+    func hasFullDiskAccess() -> Bool {
+        // Try to access a known protected location
+        let testPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Safari/History.db")
+
+        return FileManager.default.isReadableFile(atPath: testPath.path)
+    }
+
+    func requestFullDiskAccess() {
+        // Opens System Settings to Full Disk Access pane
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
+        NSWorkspace.shared.open(url)
+    }
+}
+
+// In MainViewModel
+func startScan() {
+    guard let folder = selectedFolder else { return }
+
+    // Check permissions first
+    if !PermissionManager.shared.hasFullDiskAccess() {
+        currentError = .permissionDenied(folder)
+        showError = true
+        return
+    }
+
+    // Continue with scan...
+}
+```
+
+**User-Friendly Permission Dialog**:
+```swift
+.alert("Full Disk Access Required", isPresented: $viewModel.showPermissionError) {
+    Button("Open System Settings") {
+        PermissionManager.shared.requestFullDiskAccess()
+    }
+    Button("Cancel", role: .cancel) { }
+} message: {
+    Text("ZeroDevCleaner needs Full Disk Access to scan your development folders.\n\n1. Click 'Open System Settings'\n2. Enable 'ZeroDevCleaner' in the Full Disk Access list\n3. Return to the app and try again")
+}
+```
+
+**Acceptance Criteria**:
+- ✅ Detects missing Full Disk Access before scan
+- ✅ Shows clear, non-technical error message
+- ✅ Opens System Settings to correct pane with one click
+- ✅ Scans work properly after permission granted
+- ✅ Handles partial access gracefully (some folders accessible, some not)
+- ✅ Provides helpful guidance, not scary error messages
+
+**Testing**:
+1. Test app without Full Disk Access
+2. Verify helpful dialog shows
+3. Click "Open System Settings" and verify it goes to right place
+4. Grant access and verify scanning works
+5. Test on restricted folders (~/Library)
+6. Test with partial access
 
 ---
 
@@ -1136,76 +667,6 @@ enum ZeroDevCleanerError: LocalizedError {
 - Trigger each error scenario
 - Verify error messages are clear
 - Test recovery actions
-
----
-
-#### Task 6.2: Permission Handling & Full Disk Access
-
-**Time Estimate**: 2 hours
-**Priority**: HIGH
-**Value**: HIGH
-
-**Description**: Properly detect and handle Full Disk Access permission.
-
-**Implementation Steps**:
-
-1. **Create Permission Checker** (45 min)
-   - Create `PermissionManager.swift`
-   - Check if app has Full Disk Access
-   - Method to open System Settings
-
-2. **Add Permission Check on Launch** (30 min)
-   - Check on first folder selection
-   - Show helpful dialog if denied
-   - Link to System Settings
-
-3. **Handle Permission Errors During Scan** (45 min)
-   - Skip inaccessible folders
-   - Track skipped folders
-   - Show summary of skipped items
-
-**Code Example**:
-```swift
-@MainActor
-final class PermissionManager: ObservableObject {
-    static let shared = PermissionManager()
-
-    func hasFullDiskAccess() -> Bool {
-        // Try to access a known protected location
-        let testPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Safari/History.db")
-
-        return FileManager.default.isReadableFile(atPath: testPath.path)
-    }
-
-    func requestFullDiskAccess() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
-        NSWorkspace.shared.open(url)
-    }
-}
-
-// In ViewModel
-func checkPermissionsBeforeScan() -> Bool {
-    guard PermissionManager.shared.hasFullDiskAccess() else {
-        currentError = .permissionDenied(selectedFolder!)
-        showError = true
-        return false
-    }
-    return true
-}
-```
-
-**Acceptance Criteria**:
-- Detects missing Full Disk Access
-- Shows helpful error message
-- Opens System Settings to correct pane
-- Scans continue after permission granted
-- Handles partial access gracefully
-
-**Testing**:
-- Test without Full Disk Access
-- Grant access and verify scanning works
-- Test on restricted folders
 
 ---
 
@@ -1848,13 +1309,27 @@ These are "nice to have" features mentioned in docs:
 
 ## Implementation Priorities Summary
 
-### 🔴 Must Have (For Release)
-1. Phase 4B: MVP Enhancements (6-8 hours)
-2. Phase 6: Error Handling (6-8 hours)
-3. Phase 7: Testing (8-12 hours)
-4. Phase 10: Documentation & Release (6-8 hours)
+### ⚠️ CRITICAL - Must Do First
+**Task 6.2: Permission Handling & Full Disk Access** (2 hours)
+- This is the HIGHEST PRIORITY task
+- The app cannot function on macOS without Full Disk Access
+- Users will see "permission denied" errors everywhere
+- Must be implemented before any real-world testing or use
+- See Phase 6, Task 6.2 for full details
 
-**Total**: 26-36 hours
+### 🔴 Must Have (For Release)
+1. **Phase 6: Error Handling (6-8 hours)** ← START HERE
+   - Task 6.2: Permission Handling (2h) ⚠️ DO FIRST
+   - Task 6.1: Comprehensive Error Handling (2h)
+   - Task 6.3: Handle Edge Cases (2-3h)
+   - Task 6.4: Logging & Debugging (1h)
+
+2. Phase 7: Testing (8-12 hours)
+3. Phase 10: Documentation & Release (6-8 hours)
+
+**Total**: 20-28 hours
+
+**Note**: Phase 4B (MVP Enhancements) is complete ✅
 
 ### 🟡 Should Have (Soon After Release)
 1. Phase 5: Enhanced UI (8-10 hours)
