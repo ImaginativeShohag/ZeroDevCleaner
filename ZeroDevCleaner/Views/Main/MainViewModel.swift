@@ -30,6 +30,22 @@ final class MainViewModel {
         }
     }
 
+    enum SortColumn: String, CaseIterable {
+        case projectName = "Project"
+        case type = "Type"
+        case size = "Size"
+        case lastModified = "Last Modified"
+    }
+
+    enum SortOrder {
+        case ascending
+        case descending
+
+        mutating func toggle() {
+            self = self == .ascending ? .descending : .ascending
+        }
+    }
+
     // MARK: - State Properties
 
     /// Currently selected folder to scan
@@ -40,6 +56,12 @@ final class MainViewModel {
 
     /// Current filter type
     var currentFilter: FilterType = .all
+
+    /// Current sort column
+    var sortColumn: SortColumn = .size
+
+    /// Current sort order
+    var sortOrder: SortOrder = .descending
 
     /// Filtered results based on current filter
     var filteredResults: [BuildFolder] {
@@ -56,6 +78,26 @@ final class MainViewModel {
             case .swiftPackage:
                 return folder.projectType == .swiftPackage
             }
+        }
+    }
+
+    /// Sorted and filtered results
+    var sortedAndFilteredResults: [BuildFolder] {
+        let filtered = filteredResults
+
+        return filtered.sorted { lhs, rhs in
+            let result: Bool
+            switch sortColumn {
+            case .projectName:
+                result = lhs.projectName.localizedStandardCompare(rhs.projectName) == .orderedAscending
+            case .type:
+                result = lhs.projectType.rawValue < rhs.projectType.rawValue
+            case .size:
+                result = lhs.size < rhs.size
+            case .lastModified:
+                result = lhs.lastModified < rhs.lastModified
+            }
+            return sortOrder == .ascending ? result : !result
         }
     }
 
@@ -263,6 +305,16 @@ final class MainViewModel {
     }
 
     // MARK: - Selection Management
+
+    /// Sorts results by the given column
+    func sort(by column: SortColumn) {
+        if sortColumn == column {
+            sortOrder.toggle()
+        } else {
+            sortColumn = column
+            sortOrder = column == .size ? .descending : .ascending
+        }
+    }
 
     /// Toggles selection for a specific folder
     func toggleSelection(for folder: BuildFolder) {

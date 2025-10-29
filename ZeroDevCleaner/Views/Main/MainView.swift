@@ -29,16 +29,8 @@ struct MainView: View {
                 )
             } else {
                 ScanResultsView(
-                    results: viewModel.filteredResults,
-                    currentFilter: $viewModel.currentFilter,
-                    onToggleSelection: viewModel.toggleSelection,
-                    onSelectAll: viewModel.selectAll,
-                    onDeselectAll: viewModel.deselectAll,
-                    onDelete: viewModel.deleteSelectedFolders,
-                    onShowInFinder: viewModel.showInFinder,
-                    selectedSize: viewModel.formattedSelectedSize,
-                    totalCount: viewModel.totalFoldersCount,
-                    totalSize: viewModel.formattedTotalSize
+                    viewModel: viewModel,
+                    onShowInFinder: viewModel.showInFinder
                 )
             }
         }

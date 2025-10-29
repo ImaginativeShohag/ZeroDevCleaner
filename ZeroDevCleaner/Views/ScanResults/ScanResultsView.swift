@@ -8,16 +8,8 @@
 import SwiftUI
 
 struct ScanResultsView: View {
-    let results: [BuildFolder]
-    @Binding var currentFilter: MainViewModel.FilterType
-    let onToggleSelection: (BuildFolder) -> Void
-    let onSelectAll: () -> Void
-    let onDeselectAll: () -> Void
-    let onDelete: () -> Void
+    @Bindable var viewModel: MainViewModel
     let onShowInFinder: (BuildFolder) -> Void
-    let selectedSize: String
-    let totalCount: Int
-    let totalSize: String
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,12 +33,12 @@ struct ScanResultsView: View {
                             Image(systemName: "folder.fill")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            Text("\(totalCount) folders")
+                            Text("\(viewModel.totalFoldersCount) folders")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                             Text("•")
                                 .foregroundStyle(.tertiary)
-                            Text(totalSize)
+                            Text(viewModel.formattedTotalSize)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
@@ -69,7 +61,7 @@ struct ScanResultsView: View {
                                 .fontWeight(.medium)
                             Text("•")
                                 .foregroundStyle(.tertiary)
-                            Text(selectedSize)
+                            Text(viewModel.formattedSelectedSize)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.blue)
@@ -86,16 +78,16 @@ struct ScanResultsView: View {
             // Action Buttons
             HStack {
                 HStack(spacing: 12) {
-                    Button("Select All", action: onSelectAll)
+                    Button("Select All", action: viewModel.selectAll)
                         .buttonStyle(.bordered)
 
-                    Button("Deselect All", action: onDeselectAll)
+                    Button("Deselect All", action: viewModel.deselectAll)
                         .buttonStyle(.bordered)
                 }
 
                 Spacer()
 
-                Button("Remove Selected", action: onDelete)
+                Button("Remove Selected", action: viewModel.deleteSelectedFolders)
                     .buttonStyle(.borderedProminent)
                     .disabled(selectedCount == 0)
             }
@@ -108,7 +100,7 @@ struct ScanResultsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Picker("Filter", selection: $currentFilter) {
+                Picker("Filter", selection: $viewModel.currentFilter) {
                     ForEach(MainViewModel.FilterType.allCases, id: \.self) { filter in
                         Label(filter.rawValue, systemImage: filter.icon)
                             .tag(filter)
@@ -119,7 +111,7 @@ struct ScanResultsView: View {
 
                 Spacer()
 
-                Text("\(results.count) of \(totalCount) shown")
+                Text("\(viewModel.filteredResults.count) of \(viewModel.totalFoldersCount) shown")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -129,36 +121,58 @@ struct ScanResultsView: View {
             Divider()
 
             // Results Table
-            Table(results) {
+            Table(viewModel.sortedAndFilteredResults) {
                 TableColumn("") { folder in
                     Toggle("", isOn: Binding(
                         get: { folder.isSelected },
-                        set: { _ in onToggleSelection(folder) }
+                        set: { _ in viewModel.toggleSelection(for: folder) }
                     ))
                     .toggleStyle(.checkbox)
+                    .labelsHidden()
                 }
                 .width(40)
 
-                TableColumn("Project", value: \.projectName)
+                TableColumn("Project") { folder in
+                    HStack {
+                        Image(systemName: folder.projectType.iconName)
+                            .foregroundStyle(folder.projectType.color)
+                        Text(folder.projectName)
+                    }
+                }
+                .width(min: 150, ideal: 200, max: 300)
+                .customizationID("project")
 
                 TableColumn("Type") { folder in
-                    Label(folder.projectType.displayName, systemImage: folder.projectType.iconName)
+                    Text(folder.projectType.displayName)
                 }
+                .width(min: 100, ideal: 120)
+                .customizationID("type")
 
-                TableColumn("Size", value: \.formattedSize)
+                TableColumn("Size") { folder in
+                    Text(folder.formattedSize)
+                        .monospacedDigit()
+                }
+                .width(min: 80, ideal: 100)
+                .customizationID("size")
 
-                TableColumn("Last Modified", value: \.formattedLastModified)
+                TableColumn("Last Modified") { folder in
+                    Text(folder.formattedLastModified)
+                }
+                .width(min: 120, ideal: 150)
+                .customizationID("lastModified")
 
                 TableColumn("Path") { folder in
                     Text(folder.path.path)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                        .help(folder.path.path)
                 }
+                .width(min: 200)
             }
             .contextMenu(forSelectionType: BuildFolder.ID.self) { items in
                 if let itemId = items.first,
-                   let folder = results.first(where: { $0.id == itemId }) {
+                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId }) {
                     Button("Show in Finder") {
                         onShowInFinder(folder)
                     }
@@ -171,40 +185,61 @@ struct ScanResultsView: View {
             } primaryAction: { items in
                 // Double-click action
                 if let itemId = items.first,
-                   let folder = results.first(where: { $0.id == itemId }) {
+                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId }) {
                     onShowInFinder(folder)
                 }
             }
+
+            // Sort Controls
+            HStack {
+                Text("Sort by:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Picker("Sort Column", selection: $viewModel.sortColumn) {
+                    ForEach(MainViewModel.SortColumn.allCases, id: \.self) { column in
+                        Text(column.rawValue).tag(column)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 150)
+
+                Button {
+                    viewModel.sortOrder.toggle()
+                } label: {
+                    Image(systemName: viewModel.sortOrder == .ascending ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .help(viewModel.sortOrder == .ascending ? "Ascending" : "Descending")
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
         }
     }
 
     private var selectedCount: Int {
-        results.filter(\.isSelected).count
+        viewModel.selectedFolders.count
     }
 }
 
 #Preview {
-    @Previewable @State var filter = MainViewModel.FilterType.all
+    @Previewable @State var viewModel = MainViewModel()
+
+    viewModel.scanResults = [
+        BuildFolder(
+            path: URL(fileURLWithPath: "/test/build"),
+            projectType: .android,
+            size: 1024 * 1024 * 100,
+            projectName: "TestApp",
+            lastModified: Date(),
+            isSelected: true
+        )
+    ]
 
     return ScanResultsView(
-        results: [
-            BuildFolder(
-                path: URL(fileURLWithPath: "/test/build"),
-                projectType: .android,
-                size: 1024 * 1024 * 100,
-                projectName: "TestApp",
-                lastModified: Date(),
-                isSelected: true
-            )
-        ],
-        currentFilter: $filter,
-        onToggleSelection: { _ in },
-        onSelectAll: {},
-        onDeselectAll: {},
-        onDelete: {},
-        onShowInFinder: { _ in },
-        selectedSize: "100 MB",
-        totalCount: 1,
-        totalSize: "100 MB"
+        viewModel: viewModel,
+        onShowInFinder: { _ in }
     )
 }

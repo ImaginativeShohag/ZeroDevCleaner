@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// Represents the type of development project
 enum ProjectType: String, Codable, CaseIterable, Sendable {
@@ -34,6 +35,18 @@ enum ProjectType: String, Codable, CaseIterable, Sendable {
             return "apple.logo"
         case .swiftPackage:
             return "shippingbox.fill"
+        }
+    }
+
+    /// Color for the project type icon
+    var color: Color {
+        switch self {
+        case .android:
+            return .green
+        case .iOS:
+            return .blue
+        case .swiftPackage:
+            return .orange
         }
     }
 

@@ -226,7 +226,7 @@ final class FileScannerTests: XCTestCase {
 
         mockSizeCalculator.mockSize = 1024 * 1024 * 10
 
-        let progressCalls = ActorBox<[(String, Int)]>()
+        let progressCalls = ActorBox<(String, Int)>()
 
         // When
         _ = try await sut.scanDirectory(at: tempDirectory) { path, count in
