@@ -59,11 +59,12 @@ final class FileScanner: FileScannerProtocol {
     ) async throws {
         guard currentDepth < maxDepth else { return }
 
-        // Get directory contents, skipping hidden files
+        // Get directory contents WITHOUT skipping hidden files
+        // We need to see .build folders!
         let contents = try fileManager.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
-            options: [.skipsHiddenFiles]
+            options: []
         )
 
         for itemURL in contents {
@@ -78,6 +79,12 @@ final class FileScanner: FileScannerProtocol {
             }
 
             let folderName = itemURL.lastPathComponent
+
+            // Skip system/version control hidden folders (but allow .build)
+            if folderName.hasPrefix(".") && folderName != ".build" {
+                // Skip .git, .svn, .DS_Store, etc.
+                continue
+            }
 
             // Check if this is a build folder
             if folderName == "build" || folderName == ".build" {

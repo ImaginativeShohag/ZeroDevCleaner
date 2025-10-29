@@ -135,8 +135,8 @@ final class ProjectValidatorTests: XCTestCase {
         XCTAssertFalse(result)
     }
 
-    func test_isValidiOSProject_withWrongFolderName_returnsFalse() throws {
-        // Given: Folder not named ".build"
+    func test_isValidiOSProject_withBuildFolder_returnsTrue() throws {
+        // Given: iOS project with "build" folder (legacy/in-place build)
         let projectDir = tempDirectory.appendingPathComponent("iOSProject3")
         let buildDir = projectDir.appendingPathComponent("build")
         let xcodeProjDir = projectDir.appendingPathComponent("App.xcodeproj")
@@ -148,7 +148,23 @@ final class ProjectValidatorTests: XCTestCase {
         let result = sut.isValidiOSProject(buildFolder: buildDir)
 
         // Then
-        XCTAssertFalse(result)
+        XCTAssertTrue(result, "iOS projects can have 'build' folders for legacy/in-place builds")
+    }
+
+    func test_isValidiOSProject_withDotBuildFolder_returnsTrue() throws {
+        // Given: iOS project with ".build" folder (SPM dependencies)
+        let projectDir = tempDirectory.appendingPathComponent("iOSProject4")
+        let buildDir = projectDir.appendingPathComponent(".build")
+        let xcodeProjDir = projectDir.appendingPathComponent("App.xcodeproj")
+
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: xcodeProjDir, withIntermediateDirectories: true)
+
+        // When
+        let result = sut.isValidiOSProject(buildFolder: buildDir)
+
+        // Then
+        XCTAssertTrue(result, "iOS projects can have '.build' folders for SPM dependencies")
     }
 
     // MARK: - Swift Package Tests

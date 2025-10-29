@@ -46,12 +46,16 @@ final class ProjectValidator: ProjectValidatorProtocol, Sendable {
     }
 
     func isValidiOSProject(buildFolder: URL) -> Bool {
-        // Check if folder is named ".build"
-        guard buildFolder.lastPathComponent == ".build" else {
+        let folderName = buildFolder.lastPathComponent
+
+        // iOS/Xcode projects can have both "build" and ".build" folders
+        // - "build" is used for legacy builds or in-place builds
+        // - ".build" is used for SPM dependencies in Xcode projects
+        guard folderName == "build" || folderName == ".build" else {
             return false
         }
 
-        // Look for .xcodeproj in parent directories
+        // Look for .xcodeproj or .xcworkspace in parent directories
         let parentURL = buildFolder.deletingLastPathComponent()
         do {
             let contents = try fileManager.contentsOfDirectory(
