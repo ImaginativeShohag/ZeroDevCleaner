@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ScanResultsView: View {
     let results: [BuildFolder]
+    @Binding var currentFilter: MainViewModel.FilterType
     let onToggleSelection: (BuildFolder) -> Void
     let onSelectAll: () -> Void
     let onDeselectAll: () -> Void
@@ -101,6 +102,30 @@ struct ScanResultsView: View {
             .padding(.horizontal)
             .padding(.vertical, 8)
 
+            // Filter Picker
+            HStack {
+                Text("Filter:")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Picker("Filter", selection: $currentFilter) {
+                    ForEach(MainViewModel.FilterType.allCases, id: \.self) { filter in
+                        Label(filter.rawValue, systemImage: filter.icon)
+                            .tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 400)
+
+                Spacer()
+
+                Text("\(results.count) of \(totalCount) shown")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
             Divider()
 
             // Results Table
@@ -154,7 +179,9 @@ struct ScanResultsView: View {
 }
 
 #Preview {
-    ScanResultsView(
+    @Previewable @State var filter = MainViewModel.FilterType.all
+
+    return ScanResultsView(
         results: [
             BuildFolder(
                 path: URL(fileURLWithPath: "/test/build"),
@@ -165,6 +192,7 @@ struct ScanResultsView: View {
                 isSelected: true
             )
         ],
+        currentFilter: $filter,
         onToggleSelection: { _ in },
         onSelectAll: {},
         onDeselectAll: {},

@@ -27,7 +27,8 @@ struct MainView: View {
                 )
             } else {
                 ScanResultsView(
-                    results: viewModel.scanResults,
+                    results: viewModel.filteredResults,
+                    currentFilter: $viewModel.currentFilter,
                     onToggleSelection: viewModel.toggleSelection,
                     onSelectAll: viewModel.selectAll,
                     onDeselectAll: viewModel.deselectAll,

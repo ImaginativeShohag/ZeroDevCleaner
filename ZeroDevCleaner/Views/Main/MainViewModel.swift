@@ -11,6 +11,24 @@ import Observation
 @Observable
 @MainActor
 final class MainViewModel {
+    // MARK: - Filter Types
+
+    enum FilterType: String, CaseIterable, Sendable {
+        case all = "All"
+        case android = "Android"
+        case iOS = "iOS"
+        case swiftPackage = "Swift Package"
+
+        var icon: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .android: return "cube.fill"
+            case .iOS: return "apple.logo"
+            case .swiftPackage: return "shippingbox.fill"
+            }
+        }
+    }
+
     // MARK: - State Properties
 
     /// Currently selected folder to scan
@@ -18,6 +36,27 @@ final class MainViewModel {
 
     /// Results from the last scan
     var scanResults: [BuildFolder] = []
+
+    /// Current filter type
+    var currentFilter: FilterType = .all
+
+    /// Filtered results based on current filter
+    var filteredResults: [BuildFolder] {
+        guard currentFilter != .all else { return scanResults }
+
+        return scanResults.filter { folder in
+            switch currentFilter {
+            case .all:
+                return true
+            case .android:
+                return folder.projectType == .android
+            case .iOS:
+                return folder.projectType == .iOS
+            case .swiftPackage:
+                return folder.projectType == .swiftPackage
+            }
+        }
+    }
 
     /// Whether a scan is currently in progress
     var isScanning: Bool = false
@@ -162,17 +201,23 @@ final class MainViewModel {
         )
     }
 
-    /// Selects all folders
+    /// Selects all folders (in current filter view)
     func selectAll() {
+        let filteredIds = Set(filteredResults.map(\.id))
         for index in scanResults.indices {
-            scanResults[index].isSelected = true
+            if filteredIds.contains(scanResults[index].id) {
+                scanResults[index].isSelected = true
+            }
         }
     }
 
-    /// Deselects all folders
+    /// Deselects all folders (in current filter view)
     func deselectAll() {
+        let filteredIds = Set(filteredResults.map(\.id))
         for index in scanResults.indices {
-            scanResults[index].isSelected = false
+            if filteredIds.contains(scanResults[index].id) {
+                scanResults[index].isSelected = false
+            }
         }
     }
 
