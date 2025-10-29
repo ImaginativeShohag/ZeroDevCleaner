@@ -15,12 +15,12 @@
 
 ## 🎯 Next Priority: Feature Enhancements
 
-### Phase 5: Enhanced UI & Polish (6-8 hours remaining)
+### Phase 5: Enhanced UI & Polish (4.5 hours remaining)
 **Goal**: Make the app look and feel professional
 
 **Tasks:**
 1. ✅ **Sortable Table Columns** (2h) - COMPLETE! Sort by name, type, size, date with dropdown controls
-2. **Better Confirmation Dialog** (1.5h) - Styled sheet with item list and total size
+2. ✅ **Better Confirmation Dialog** (1.5h) - COMPLETE! Professional sheet with item list and total size
 3. **Better Deletion Progress** (1.5h) - Show current item, progress bar, size tracking
 4. **Visual Polish & Animations** (3h) - Hover effects, transitions, better styling
 
@@ -77,10 +77,11 @@
 **Phase 1-4**: Foundation, Services, ViewModel, Basic UI ✅
 **Phase 4B**: MVP Enhancements (7 features) ✅
 **Phase 5.1**: Sortable Table Columns ✅
+**Phase 5.2**: Better Confirmation Dialog ✅
 **Phase 6**: Error Handling & Robustness ✅
 **Phase 7.1-7.2**: Unit & Integration Tests ✅
 
-**Total Commits**: 31
+**Total Commits**: 33
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 
