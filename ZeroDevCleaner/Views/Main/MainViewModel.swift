@@ -151,13 +151,6 @@ final class MainViewModel {
     func startScan() {
         guard let folder = selectedFolder else { return }
 
-        // Check for Full Disk Access permission first
-        if !PermissionManager.shared.hasFullDiskAccess() {
-            currentError = .permissionDenied(folder)
-            showPermissionError = true
-            return
-        }
-
         // Cancel any existing scan
         cancelScan()
 
@@ -184,6 +177,24 @@ final class MainViewModel {
 
                 // Add to recent folders on successful scan
                 self.recentFoldersManager.addFolder(folder)
+            } catch let error as NSError {
+                // Check if this is a permission error
+                // NSFileReadNoPermissionError = 257
+                // NSFileReadNoSuchFileError = 260 (sometimes returned for permission issues)
+                if error.domain == NSCocoaErrorDomain &&
+                   (error.code == 257 || error.code == 260 || error.code == 513) {
+                    // This is a permission issue
+                    self.currentError = .permissionDenied(folder)
+                    self.showPermissionError = true
+                } else if error.localizedDescription.lowercased().contains("permission") ||
+                          error.localizedDescription.lowercased().contains("not permitted") {
+                    // Catch any other permission-related errors by description
+                    self.currentError = .permissionDenied(folder)
+                    self.showPermissionError = true
+                } else {
+                    self.handleError(error)
+                }
+                self.isScanning = false
             } catch {
                 self.handleError(error)
                 self.isScanning = false

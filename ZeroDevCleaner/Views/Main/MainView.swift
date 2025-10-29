@@ -57,14 +57,11 @@ struct MainView: View {
             Button("Show App in Finder") {
                 viewModel.revealAppInFinder()
             }
-            Button("Quit App") {
-                NSApplication.shared.terminate(nil)
-            }
-            Button("Cancel", role: .cancel) {
+            Button("OK", role: .cancel) {
                 viewModel.dismissError()
             }
         } message: {
-            Text("ZeroDevCleaner needs Full Disk Access to scan your development folders.\n\nSteps to grant access:\n1. Click 'Show App in Finder' to locate the app\n2. Click 'Open System Settings'\n3. Drag the app to Full Disk Access list or click '+' to add it\n4. Enable 'ZeroDevCleaner' in the list\n5. Click 'Quit App' below\n6. Restart the app\n\n⚠️ Important: You must restart the app after granting permission!")
+            Text("ZeroDevCleaner cannot access this folder without Full Disk Access permission.\n\nTo grant access:\n1. Click 'Open System Settings'\n2. Click 'Show App in Finder' to locate ZeroDevCleaner\n3. In System Settings, click the '+' button under Full Disk Access\n4. Drag ZeroDevCleaner from Finder to the list, or navigate to select it\n5. Make sure the checkbox next to ZeroDevCleaner is enabled\n6. Quit and restart this app\n\n⚠️ You must restart the app after granting permission!")
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
