@@ -88,4 +88,137 @@ final class MainViewModel {
             selectedFolder = panel.url
         }
     }
+
+    // MARK: - Scanning
+
+    /// Starts scanning the selected folder
+    func startScan() {
+        guard let folder = selectedFolder else { return }
+
+        // Cancel any existing scan
+        cancelScan()
+
+        // Reset state
+        scanResults = []
+        scanProgress = 0.0
+        currentScanPath = ""
+        isScanning = true
+
+        // Start scan task
+        scanTask = Task {
+            do {
+                let results = try await scanner.scanDirectory(at: folder) { [weak self] path, count in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        self.currentScanPath = path
+                        self.scanProgress = Double(count) / 100.0 // Approximate progress
+                    }
+                }
+
+                // Update results on main actor
+                self.scanResults = results
+                self.isScanning = false
+            } catch {
+                self.handleError(error)
+                self.isScanning = false
+            }
+        }
+    }
+
+    /// Cancels the current scan
+    func cancelScan() {
+        scanTask?.cancel()
+        scanTask = nil
+        isScanning = false
+    }
+
+    // MARK: - Selection Management
+
+    /// Toggles selection for a specific folder
+    func toggleSelection(for folder: BuildFolder) {
+        if let index = scanResults.firstIndex(where: { $0.id == folder.id }) {
+            scanResults[index].isSelected.toggle()
+        }
+    }
+
+    /// Selects all folders
+    func selectAll() {
+        for index in scanResults.indices {
+            scanResults[index].isSelected = true
+        }
+    }
+
+    /// Deselects all folders
+    func deselectAll() {
+        for index in scanResults.indices {
+            scanResults[index].isSelected = false
+        }
+    }
+
+    /// Returns currently selected folders
+    var selectedFolders: [BuildFolder] {
+        scanResults.filter(\.isSelected)
+    }
+
+    /// Total size of selected folders
+    var selectedSize: Int64 {
+        selectedFolders.reduce(0) { $0 + $1.size }
+    }
+
+    /// Formatted selected size
+    var formattedSelectedSize: String {
+        ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
+    }
+
+    // MARK: - Deletion
+
+    /// Deletes selected folders
+    func deleteSelectedFolders() {
+        let foldersToDelete = selectedFolders
+        guard !foldersToDelete.isEmpty else { return }
+
+        isDeleting = true
+        deletionProgress = 0.0
+
+        Task {
+            do {
+                try await deleter.delete(folders: foldersToDelete) { [weak self] current, total in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        self.deletionProgress = Double(current) / Double(total)
+                    }
+                }
+
+                // Remove deleted folders from results
+                for folder in foldersToDelete {
+                    if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
+                        self.scanResults.remove(at: index)
+                    }
+                }
+
+                self.isDeleting = false
+            } catch {
+                self.handleError(error)
+                self.isDeleting = false
+            }
+        }
+    }
+
+    // MARK: - Error Handling
+
+    /// Handles errors and shows them to user
+    private func handleError(_ error: Error) {
+        if let cleanerError = error as? ZeroDevCleanerError {
+            currentError = cleanerError
+        } else {
+            currentError = .unknownError(error)
+        }
+        showError = true
+    }
+
+    /// Dismisses current error
+    func dismissError() {
+        showError = false
+        currentError = nil
+    }
 }
