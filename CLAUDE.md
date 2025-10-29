@@ -2,7 +2,7 @@
 
 ## Last Updated: 2025-10-29
 
-## Current Status: Phase 2 Complete ✅
+## Current Status: Phase 3 Complete ✅
 
 ### Phase 1: Foundation (Complete)
 
@@ -61,6 +61,36 @@
    - Async deletion with progress tracking
    - Error handling with custom error types
    - Thread-safe operations
+
+### Phase 3: ViewModel Layer (Complete)
+
+**Duration**: ~25 minutes
+**Commits**: 4 commits
+
+#### Completed ViewModels:
+1. ✅ MainViewModel Implementation
+   - Uses @Observable macro (Swift 6)
+   - @MainActor for UI thread safety
+   - Folder selection with NSOpenPanel
+   - Async scanning with progress tracking
+   - Selection management (select all, deselect all, toggle)
+   - Deletion with progress callbacks
+   - Error handling with dismissal
+   - Task-based concurrency (no DispatchQueue)
+
+2. ✅ ViewModel Tests
+   - Mock services (MockFileScanner, MockFileDeleter)
+   - 9 comprehensive tests for MainViewModel
+   - Tests for initialization, scanning, selection, deletion
+   - All tests passing with @MainActor
+
+#### ViewModel Features:
+- State management with @Observable
+- Computed properties (selectedSize, formattedSelectedSize)
+- Async/await operations
+- Progress tracking for scan and deletion
+- Error handling with ZeroDevCleanerError
+- Task cancellation support
 
 #### Project Structure:
 ```
