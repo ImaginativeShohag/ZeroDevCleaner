@@ -47,7 +47,14 @@ struct MainView: View {
             Button("OK") { viewModel.dismissError() }
         } message: {
             if let error = viewModel.currentError {
-                Text(error.localizedDescription)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(error.localizedDescription)
+                        .fontWeight(.semibold)
+
+                    if let suggestion = error.recoverySuggestion {
+                        Text(suggestion)
+                    }
+                }
             }
         }
         .alert("Full Disk Access Required", isPresented: $viewModel.showPermissionError) {

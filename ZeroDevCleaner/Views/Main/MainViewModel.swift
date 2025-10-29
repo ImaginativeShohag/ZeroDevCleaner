@@ -142,6 +142,17 @@ final class MainViewModel {
             return
         }
 
+        // Check if it's a network drive
+        do {
+            let values = try url.resourceValues(forKeys: [.volumeIsLocalKey])
+            if let isLocal = values.volumeIsLocal, !isLocal {
+                handleError(ZeroDevCleanerError.networkDriveNotSupported(url))
+                return
+            }
+        } catch {
+            // If we can't determine, allow the selection
+        }
+
         selectedFolder = url
     }
 
@@ -175,8 +186,14 @@ final class MainViewModel {
                 self.scanResults = results
                 self.isScanning = false
 
-                // Add to recent folders on successful scan
-                self.recentFoldersManager.addFolder(folder)
+                // Check for empty results
+                if results.isEmpty {
+                    self.currentError = .noResultsFound(folder)
+                    self.showError = true
+                } else {
+                    // Add to recent folders on successful scan with results
+                    self.recentFoldersManager.addFolder(folder)
+                }
             } catch let error as NSError {
                 // Check if this is a permission error
                 // NSFileReadNoPermissionError = 257
@@ -295,13 +312,29 @@ final class MainViewModel {
                     }
                 }
 
-                // Remove deleted folders from results
+                // All deletions succeeded - remove all deleted folders from results
                 for folder in foldersToDelete {
                     if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
                         self.scanResults.remove(at: index)
                     }
                 }
 
+                self.isDeleting = false
+            } catch let error as ZeroDevCleanerError {
+                // Handle partial deletion failure
+                if case .partialDeletionFailure(let failedURLs) = error {
+                    // Remove only successfully deleted folders
+                    let failedSet = Set(failedURLs)
+                    let successfullyDeleted = foldersToDelete.filter { !failedSet.contains($0.path) }
+
+                    for folder in successfullyDeleted {
+                        if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
+                            self.scanResults.remove(at: index)
+                        }
+                    }
+                }
+
+                self.handleError(error)
                 self.isDeleting = false
             } catch {
                 self.handleError(error)

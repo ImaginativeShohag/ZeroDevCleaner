@@ -18,11 +18,24 @@ final class FileDeleter: FileDeleterProtocol {
         folders: [BuildFolder],
         progressHandler: DeletionProgressHandler?
     ) async throws {
+        var failedDeletions: [URL] = []
+
         for (index, folder) in folders.enumerated() {
-            try await deleteSingleFolder(folder)
+            do {
+                try await deleteSingleFolder(folder)
+            } catch {
+                // Collect failures but continue with other deletions
+                failedDeletions.append(folder.path)
+            }
+
             await MainActor.run {
                 progressHandler?(index + 1, folders.count)
             }
+        }
+
+        // If some deletions failed, throw partial failure error
+        if !failedDeletions.isEmpty {
+            throw ZeroDevCleanerError.partialDeletionFailure(failedDeletions)
         }
     }
 
