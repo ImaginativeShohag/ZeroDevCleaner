@@ -7,8 +7,8 @@
 
 import Foundation
 
-final class ProjectValidator: ProjectValidatorProtocol {
-    private let fileManager: FileManager
+final class ProjectValidator: ProjectValidatorProtocol, Sendable {
+    nonisolated(unsafe) private let fileManager: FileManager
 
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager

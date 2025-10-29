@@ -8,7 +8,7 @@
 import Foundation
 
 /// Custom errors for ZeroDevCleaner operations
-enum ZeroDevCleanerError: LocalizedError {
+enum ZeroDevCleanerError: LocalizedError, Sendable {
     case permissionDenied(URL)
     case fileNotFound(URL)
     case deletionFailed(URL, Error)

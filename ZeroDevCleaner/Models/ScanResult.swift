@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents the result of a directory scan
-struct ScanResult: Codable {
+struct ScanResult: Codable, Sendable {
     /// Root path that was scanned
     let rootPath: URL
 

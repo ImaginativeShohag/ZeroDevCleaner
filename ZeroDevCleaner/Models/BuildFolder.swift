@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a build folder found during scanning
-struct BuildFolder: Identifiable, Hashable, Codable {
+struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
     /// Unique identifier
     let id: UUID
 

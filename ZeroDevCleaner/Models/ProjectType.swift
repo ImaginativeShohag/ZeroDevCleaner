@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents the type of development project
-enum ProjectType: String, Codable, CaseIterable {
+enum ProjectType: String, Codable, CaseIterable, Sendable {
     case android
     case iOS
     case swiftPackage
