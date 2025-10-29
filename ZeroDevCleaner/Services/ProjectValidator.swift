@@ -1,0 +1,68 @@
+//
+//  ProjectValidator.swift
+//  ZeroDevCleaner
+//
+//  Created by Md. Mahmudul Hasan Shohag on 29/10/25.
+//
+
+import Foundation
+
+final class ProjectValidator: ProjectValidatorProtocol {
+    private let fileManager: FileManager
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
+
+    func isValidAndroidProject(buildFolder: URL) -> Bool {
+        // Implementation in next task
+        false
+    }
+
+    func isValidiOSProject(buildFolder: URL) -> Bool {
+        // Implementation in next task
+        false
+    }
+
+    func isValidSwiftPackage(buildFolder: URL) -> Bool {
+        // Implementation in next task
+        false
+    }
+
+    func detectProjectType(buildFolder: URL) -> ProjectType? {
+        if isValidAndroidProject(buildFolder: buildFolder) {
+            return .android
+        } else if isValidSwiftPackage(buildFolder: buildFolder) {
+            return .swiftPackage
+        } else if isValidiOSProject(buildFolder: buildFolder) {
+            return .iOS
+        }
+        return nil
+    }
+
+    // MARK: - Private Helpers
+
+    private func fileExists(at path: String) -> Bool {
+        fileManager.fileExists(atPath: path)
+    }
+
+    private func directoryContainsFile(directory: URL, named: String) -> Bool {
+        fileExists(at: directory.appendingPathComponent(named).path)
+    }
+
+    private func findFileInParentDirectories(from url: URL, named: String, maxLevels: Int = 5) -> Bool {
+        var currentURL = url.deletingLastPathComponent()
+        var level = 0
+
+        while level < maxLevels {
+            if directoryContainsFile(directory: currentURL, named: named) {
+                return true
+            }
+            let parentURL = currentURL.deletingLastPathComponent()
+            if parentURL == currentURL { break }
+            currentURL = parentURL
+            level += 1
+        }
+        return false
+    }
+}
