@@ -242,19 +242,22 @@ final class MainViewModel {
 
     /// Cancels the current scan
     func cancelScan() {
-        Logger.scanning.info("Cancelling scan")
+        // Only log and show errors if we were actually scanning
+        let wasScanning = isScanning
+
+        if wasScanning {
+            Logger.scanning.info("Cancelling scan")
+        }
+
         scanTask?.cancel()
         scanTask = nil
-
-        // Show partial results if we have any
-        // The scan will complete with whatever results were found up to the cancellation point
         isScanning = false
 
-        // Only show cancelled error if we have no results
-        if scanResults.isEmpty {
+        // Only show cancelled error if we were actually scanning and have no results
+        if wasScanning && scanResults.isEmpty {
             currentError = .scanCancelled
             showError = true
-        } else {
+        } else if wasScanning {
             Logger.scanning.info("Scan cancelled. Showing \(self.scanResults.count) partial results")
         }
     }
