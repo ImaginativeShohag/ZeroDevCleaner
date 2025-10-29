@@ -48,6 +48,16 @@ struct MainView: View {
                 Text(error.localizedDescription)
             }
         }
+        .alert("Full Disk Access Required", isPresented: $viewModel.showPermissionError) {
+            Button("Open System Settings") {
+                viewModel.openSystemSettings()
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.dismissError()
+            }
+        } message: {
+            Text("ZeroDevCleaner needs Full Disk Access to scan your development folders.\n\n1. Click 'Open System Settings'\n2. Enable 'ZeroDevCleaner' in the Full Disk Access list\n3. Restart the app and try again")
+        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button("Select Folder") {

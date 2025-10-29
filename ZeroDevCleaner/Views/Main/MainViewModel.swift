@@ -79,6 +79,9 @@ final class MainViewModel {
     /// Whether to show error alert
     var showError: Bool = false
 
+    /// Whether to show permission error alert (special handling)
+    var showPermissionError: Bool = false
+
     // MARK: - Dependencies
 
     private let scanner: FileScannerProtocol
@@ -147,6 +150,13 @@ final class MainViewModel {
     /// Starts scanning the selected folder
     func startScan() {
         guard let folder = selectedFolder else { return }
+
+        // Check for Full Disk Access permission first
+        if !PermissionManager.shared.hasFullDiskAccess() {
+            currentError = .permissionDenied(folder)
+            showPermissionError = true
+            return
+        }
 
         // Cancel any existing scan
         cancelScan()
@@ -304,6 +314,13 @@ final class MainViewModel {
     /// Dismisses current error
     func dismissError() {
         showError = false
+        showPermissionError = false
         currentError = nil
+    }
+
+    /// Opens System Settings to grant Full Disk Access
+    func openSystemSettings() {
+        PermissionManager.shared.requestFullDiskAccess()
+        dismissError()
     }
 }
