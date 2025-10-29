@@ -360,6 +360,23 @@ The app now includes all high-priority enhancements:
      - `com.apple.security.cs.disable-library-validation = true` (development)
    - **File deletion now works correctly!** ✅
 
+8. ✅ **CRITICAL FIX: .build Folders Not Being Scanned**
+   - **Root Cause**: FileScanner was using `.skipsHiddenFiles` option
+   - This prevented scanning ANY folder starting with "." including .build
+   - **Solution**:
+     - Removed `.skipsHiddenFiles` from directory enumeration
+     - Added explicit filtering to skip .git, .svn, but allow .build
+     - Updated ProjectValidator to detect both "build" and ".build" for iOS
+   - **Impact**:
+     - ✅ Swift Package Manager .build folders now detected
+     - ✅ Xcode project .build folders (SPM dependencies) now detected
+     - ✅ iOS legacy build folders also detected
+     - ✅ System folders (.git, .svn, .idea) still skipped
+   - **Tests Added**:
+     - Created FileScannerTests.swift with 11 comprehensive tests
+     - Updated ProjectValidatorTests with new test cases
+     - Total: 50+ tests passing, full coverage of scanning logic
+
 #### Remaining Tasks:
 
 **Remaining Tasks in Phase 7** (4-6 hours):
