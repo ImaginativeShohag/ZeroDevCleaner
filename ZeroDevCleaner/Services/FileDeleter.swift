@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 import OSLog
 
 final class FileDeleter: FileDeleterProtocol {
@@ -67,22 +68,37 @@ final class FileDeleter: FileDeleterProtocol {
         let deletionLogger = Logger(subsystem: "com.shohag.ZeroDevCleaner", category: "deletion")
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            Task.detached {
-                do {
-                    // Verify folder exists before attempting deletion
-                    guard self.fileManager.fileExists(atPath: folder.path.path) else {
-                        deletionLogger.error("Folder does not exist: \(folder.path.path, privacy: .public)")
-                        continuation.resume(throwing: ZeroDevCleanerError.fileNotFound(folder.path))
-                        return
-                    }
+            // Must use MainActor for NSWorkspace
+            Task { @MainActor in
+                // Verify folder exists before attempting deletion
+                guard self.fileManager.fileExists(atPath: folder.path.path) else {
+                    deletionLogger.error("Folder does not exist: \(folder.path.path, privacy: .public)")
+                    continuation.resume(throwing: ZeroDevCleanerError.fileNotFound(folder.path))
+                    return
+                }
 
-                    deletionLogger.debug("Attempting to trash: \(folder.path.path, privacy: .public)")
-                    try self.fileManager.trashItem(at: folder.path, resultingItemURL: nil)
-                    deletionLogger.debug("Successfully trashed: \(folder.path.path, privacy: .public)")
-                    continuation.resume()
-                } catch {
-                    deletionLogger.error("trashItem failed for \(folder.path.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                    continuation.resume(throwing: ZeroDevCleanerError.deletionFailed(folder.path, error))
+                // Check if we can read the folder
+                guard self.fileManager.isReadableFile(atPath: folder.path.path) else {
+                    deletionLogger.error("Folder is not readable: \(folder.path.path, privacy: .public)")
+                    continuation.resume(throwing: ZeroDevCleanerError.permissionDenied(folder.path))
+                    return
+                }
+
+                deletionLogger.debug("Attempting to recycle using NSWorkspace: \(folder.path.path, privacy: .public)")
+
+                // Use NSWorkspace.recycle which is better for user-facing deletion
+                // This properly handles permissions and shows the item in Trash
+                NSWorkspace.shared.recycle([folder.path]) { trashedItems, error in
+                    if let error = error {
+                        deletionLogger.error("NSWorkspace.recycle failed for \(folder.path.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                        continuation.resume(throwing: ZeroDevCleanerError.deletionFailed(folder.path, error))
+                    } else if let trashedURL = trashedItems[folder.path] {
+                        deletionLogger.debug("Successfully recycled to: \(trashedURL.path, privacy: .public)")
+                        continuation.resume()
+                    } else {
+                        deletionLogger.error("Recycle succeeded but no trashed URL returned for \(folder.path.path, privacy: .public)")
+                        continuation.resume(throwing: ZeroDevCleanerError.deletionFailed(folder.path, NSError(domain: "ZeroDevCleaner", code: -1, userInfo: [NSLocalizedDescriptionKey: "No trashed URL returned"])))
+                    }
                 }
             }
         }
