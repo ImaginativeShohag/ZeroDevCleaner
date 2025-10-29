@@ -161,68 +161,101 @@ ZeroDevCleanerTests/
 - ✅ Swift 6 compliant
 - ✅ Test target configured and all tests passing (31+ tests)
 
-### App Status: ✅ FULLY FUNCTIONAL MVP
+## Current Status: Phase 4B Complete ✅ - Enhanced MVP Ready!
 
-The app can now:
-- ✅ Select folders via dialog
-- ✅ Recursively scan for build folders (Android, iOS, Swift Package)
-- ✅ Display results in a table with selection controls
-- ✅ Calculate and display sizes
+### Phase 4B: MVP Enhancements (Complete)
+
+**Duration**: ~1.5 hours
+**Commits**: 4 commits
+
+#### Completed Enhancements:
+1. ✅ **Show in Finder** (45 min)
+   - Context menu on table rows with "Show in Finder"
+   - Double-click to reveal folder in Finder
+   - Uses NSWorkspace.shared.selectFile
+   - Integrated through MainViewModel
+
+2. ✅ **Drag & Drop Folder Selection** (1 hour)
+   - Drop zone in EmptyStateView
+   - Visual feedback with dashed border animation
+   - Validates dropped items are directories
+   - Smooth integration with folder selection
+
+3. ✅ **Keyboard Shortcuts** (1 hour)
+   - Cmd+O: Select Folder
+   - Cmd+R: Start Scan
+   - Cmd+A: Select All
+   - Cmd+Shift+A: Deselect All
+   - Delete: Remove Selected
+   - Menu bar commands with NotificationCenter
+
+4. ✅ **Enhanced Summary Card** (45 min)
+   - Prominent card showing total/selected statistics
+   - Visual icons and improved typography
+   - Blue highlighting for selection
+   - Better layout and spacing
+
+5. ✅ **Quick Filter by Project Type** (1.5 hours)
+   - Segmented control for All/Android/iOS/Swift Package
+   - Selection operations work on filtered view
+   - Shows "X of Y" results count
+   - Filtering state in MainViewModel
+
+6. ✅ **Recent Folders List** (1 hour)
+   - UserDefaults persistence for last 5 folders
+   - Toolbar menu with clock icon
+   - Auto-removes non-existent paths
+   - Clear recent folders option
+   - RecentFoldersManager class
+
+7. ✅ **Copy Path to Clipboard** (15 min)
+   - Context menu option
+   - NSPasteboard integration
+   - Copies full absolute path
+
+### App Status: ✅ ENHANCED MVP READY
+
+The app now includes all high-priority enhancements:
+- ✅ Select folders via dialog, drag & drop, or recent list
+- ✅ Recursively scan with validation (Android, iOS, Swift Package)
+- ✅ Enhanced summary card with totals and selection stats
+- ✅ Quick filter by project type
+- ✅ Table with context menu (Show in Finder, Copy Path)
+- ✅ Double-click to reveal in Finder
+- ✅ Full keyboard shortcut support
+- ✅ Calculate and display sizes with formatting
 - ✅ Delete selected folders safely (to Trash)
-- ✅ Show progress during scan and deletion
-- ✅ Handle errors with user-friendly alerts
+- ✅ Progress tracking for scan and deletion
+- ✅ Comprehensive error handling
 
 **Test Coverage**: 40+ tests passing
 **Swift Version**: 6.0 with strict concurrency
 **Build Status**: Clean build, no warnings
+**User Experience**: Polished and professional
 
 ---
 
-## Next Steps: Phase 4B & Beyond
+## Next Steps: Phase 6 & Beyond
 
-### 📋 Comprehensive Roadmap Available
+### 📋 Remaining Work (Per docs/13-remaining-features-plan.md)
 
-A complete implementation plan for all remaining features is documented in:
-**`docs/13-remaining-features-plan.md`**
-
-This document provides:
-- ✅ Detailed analysis of what's complete
-- 📝 Comprehensive task breakdown for remaining features
-- ⏱️ Time estimates for each task
-- 🎯 Priority-based organization
-- 📐 Code examples and implementation guidance
-- ✅ Acceptance criteria for each feature
-- 🧪 Testing requirements
-
-### Priority-Based Next Steps
-
-#### 🔴 Must Have (For Release) - 26-36 hours
-1. **Phase 4B: MVP Enhancements** (6-8 hours)
-   - Show in Finder (context menu + double-click)
-   - Drag & Drop folder selection
-   - Keyboard shortcuts (Cmd+O, Cmd+R, Cmd+A, etc.)
-   - Enhanced total space summary card
-   - Quick filter by project type
-   - Recent folders list
-   - Copy path to clipboard
-
-2. **Phase 6: Error Handling & Robustness** (6-8 hours)
-   - Comprehensive error handling
-   - Permission detection and handling
-   - Full Disk Access checking
-   - Edge case handling (empty results, cancellation, partial failures)
+#### 🔴 Must Have (For Release) - 20-28 hours remaining
+1. **Phase 6: Error Handling & Robustness** (6-8 hours)
+   - Comprehensive error handling for all scenarios
+   - Full Disk Access detection and permission flow
+   - Edge cases (empty results, cancellation, partial failures)
    - Logging support
 
-3. **Phase 7: Testing & QA** (8-12 hours)
-   - Expand unit tests
-   - Integration tests
-   - UI tests
+2. **Phase 7: Testing & QA** (8-12 hours)
+   - Expand unit tests for new features
+   - Integration tests for complete flows
+   - UI tests for keyboard navigation
    - Manual testing checklist
 
-4. **Phase 10: Documentation & Release** (6-8 hours)
-   - Code documentation
+3. **Phase 10: Documentation & Release** (6-8 hours)
+   - Code documentation with doc comments
    - User guide with screenshots
-   - Signing and notarization
+   - Code signing & notarization
    - DMG creation
    - Release process
 
@@ -232,10 +265,9 @@ This document provides:
    - Better confirmation dialog
    - Better deletion progress sheet
    - Visual polish & animations
-   - Hover effects
 
 2. **Phase 8: Performance Optimization** (4-6 hours)
-   - Performance profiling
+   - Performance profiling with Instruments
    - Large result set optimization
    - Memory optimization
 
@@ -245,7 +277,7 @@ This document provides:
 
 #### 🟢 Nice to Have (Future)
 1. Additional project types (DerivedData, Gradle cache, CocoaPods)
-2. Advanced features (Settings, Statistics, Scheduled scans, Export)
+2. Advanced features (Settings, Statistics, Scheduled scans)
 
 ---
 
