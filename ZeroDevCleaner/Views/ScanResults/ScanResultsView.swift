@@ -562,17 +562,17 @@ struct ScanResultsView: View {
                                                                         .lineLimit(1)
                                                                         .truncationMode(.middle)
 
-                                                                    Text(versionItem.formattedLastModified)
-                                                                        .font(.caption2)
-                                                                        .foregroundStyle(.quaternary)
-                                                                        .frame(minWidth: 60, alignment: .leading)
-
                                                                     Spacer()
 
                                                                     Text(versionItem.formattedSize)
                                                                         .font(.caption2)
                                                                         .monospacedDigit()
                                                                         .foregroundStyle(.tertiary)
+
+                                                                    Text(versionItem.formattedLastModified)
+                                                                        .font(.caption2)
+                                                                        .foregroundStyle(.quaternary)
+                                                                        .frame(width: 80, alignment: .trailing)
 
                                                                     Button {
                                                                         NSWorkspace.shared.selectFile(
