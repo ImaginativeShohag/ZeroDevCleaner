@@ -108,7 +108,7 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     /// Whether this location type should show subfolders
     var supportsSubItems: Bool {
         switch self {
-        case .derivedData:
+        case .derivedData, .xcodeArchives, .deviceSupport:
             return true
         default:
             return false
