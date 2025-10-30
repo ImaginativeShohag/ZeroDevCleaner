@@ -104,6 +104,16 @@ final class FileScanner: FileScannerProtocol {
                         progressHandler?(itemURL.path, foundFolders.count + 1)
                     }
                 }
+
+                // Continue scanning inside detected build folders to find nested artifacts
+                // (e.g., Android build inside node_modules)
+                try await scanRecursively(
+                    url: itemURL,
+                    currentDepth: currentDepth + 1,
+                    foundFolders: &foundFolders,
+                    group: &group,
+                    progressHandler: progressHandler
+                )
             } else {
                 // Recursively scan subdirectories
                 try await scanRecursively(

@@ -65,12 +65,19 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             let attributes = try fileManager.attributesOfItem(atPath: path.path)
             let lastModified = attributes[.modificationDate] as? Date ?? Date()
 
+            // Scan subfolders if supported (e.g., DerivedData)
+            var subItems: [StaticLocationSubItem] = []
+            if type.supportsSubItems {
+                subItems = try await scanSubItems(at: path)
+            }
+
             let location = StaticLocation(
                 type: type,
                 path: path,
                 size: size,
                 lastModified: lastModified,
-                exists: true
+                exists: true,
+                subItems: subItems
             )
 
             results.append(location)
@@ -79,5 +86,37 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
 
         Logger.scanning.info("Static location scan complete. Found \(results.filter(\.exists).count) of \(types.count) locations")
         return results
+    }
+
+    private func scanSubItems(at parentPath: URL) async throws -> [StaticLocationSubItem] {
+        let contents = try fileManager.contentsOfDirectory(
+            at: parentPath,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        var subItems: [StaticLocationSubItem] = []
+
+        for itemURL in contents {
+            let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+
+            // Only include directories
+            guard resourceValues.isDirectory == true else { continue }
+
+            let size = try await sizeCalculator.calculateSize(of: itemURL)
+            let lastModified = resourceValues.contentModificationDate ?? Date()
+
+            let subItem = StaticLocationSubItem(
+                name: itemURL.lastPathComponent,
+                path: itemURL,
+                size: size,
+                lastModified: lastModified
+            )
+
+            subItems.append(subItem)
+        }
+
+        // Sort by size (largest first)
+        return subItems.sorted { $0.size > $1.size }
     }
 }

@@ -86,6 +86,35 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return home.appendingPathComponent("Library/Caches/org.carthage.CarthageKit")
         }
     }
+
+    /// Whether this location type should show subfolders
+    var supportsSubItems: Bool {
+        switch self {
+        case .derivedData:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+/// Represents a subfolder within a static location (e.g., individual project folders in DerivedData)
+struct StaticLocationSubItem: Identifiable, Hashable {
+    let id = UUID()
+    let name: String
+    let path: URL
+    let size: Int64
+    let lastModified: Date
+
+    var formattedSize: String {
+        ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+    }
+
+    var formattedLastModified: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: lastModified, relativeTo: Date())
+    }
 }
 
 struct StaticLocation: Identifiable, Hashable {
@@ -96,6 +125,7 @@ struct StaticLocation: Identifiable, Hashable {
     var lastModified: Date
     var exists: Bool
     var isSelected: Bool = false
+    var subItems: [StaticLocationSubItem] = []
 
     var displayName: String {
         type.displayName
