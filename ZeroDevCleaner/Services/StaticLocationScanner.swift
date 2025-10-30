@@ -151,6 +151,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 // Sort versions by date (newest first)
                 let sortedArchives = archives.sorted { $0.lastModified > $1.lastModified }
 
+                // Calculate total size for this app (all versions)
+                let totalSize = sortedArchives.reduce(0) { $0 + $1.size }
+
                 // Get the most recent modification date
                 let mostRecentDate = sortedArchives.first?.lastModified ?? Date()
 
@@ -167,11 +170,10 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 }
 
                 // Create app group item with versions as sub-items
-                // Size is 0 because this is just a grouping container, not a selectable folder
                 let appItem = StaticLocationSubItem(
                     name: appName,
                     path: sortedArchives.first!.path.deletingLastPathComponent(), // Use date folder as path
-                    size: 0,  // App group is a logical grouping, not a physical folder
+                    size: totalSize,  // Total size of all versions
                     lastModified: mostRecentDate,
                     isSelected: false,
                     subItems: versionItems
@@ -252,7 +254,7 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
               let plistData = try? Data(contentsOf: infoPlistPath),
               let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
               let properties = plist["ApplicationProperties"] as? [String: Any],
-              let appName = properties["CFBundleName"] as? String ?? properties["CFBundleDisplayName"] as? String,
+              let appName = properties["CFBundleName"] as? String ?? properties["CFBundleDisplayName"] as? String ?? plist["Name"] as? String,
               let version = properties["CFBundleShortVersionString"] as? String else {
             return nil
         }
