@@ -13,11 +13,13 @@ struct StatisticsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    @Query(sort: \CleaningSession.timestamp, order: .reverse)
+    private var allSessions: [CleaningSession]
+
     @State private var statistics: CleaningStatistics = .empty
-    @State private var recentSessions: [CleaningSession] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @State private var selectedSession: CleaningSession?
+    @State private var selectedSessionID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,7 +52,7 @@ struct StatisticsView: View {
                         .font(.headline)
                 }
                 Spacer()
-            } else if statistics.sessionCount == 0 {
+            } else if allSessions.isEmpty {
                 Spacer()
                 VStack(spacing: 16) {
                     Image(systemName: "chart.bar.xaxis")
@@ -73,7 +75,7 @@ struct StatisticsView: View {
                         summaryCardsSection
 
                         // Cleaning History Chart
-                        if !recentSessions.isEmpty {
+                        if !allSessions.isEmpty {
                             cleaningHistoryChart
                         }
 
@@ -86,7 +88,11 @@ struct StatisticsView: View {
         }
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            await loadStatistics()
+            computeStatistics()
+            isLoading = false
+        }
+        .onChange(of: allSessions) { _, _ in
+            computeStatistics()
         }
     }
 
@@ -140,7 +146,7 @@ struct StatisticsView: View {
 
             GroupBox {
                 Chart {
-                    ForEach(recentSessions.reversed()) { session in
+                    ForEach(allSessions.reversed()) { session in
                         BarMark(
                             x: .value("Date", session.timestamp, unit: .day),
                             y: .value("Size", Double(session.totalSize) / 1_000_000_000) // Convert to GB
@@ -181,32 +187,32 @@ struct StatisticsView: View {
 
                 Spacer()
 
-                Text("\(recentSessions.count) session\(recentSessions.count == 1 ? "" : "s")")
+                Text("\(allSessions.count) session\(allSessions.count == 1 ? "" : "s")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             GroupBox {
-                if recentSessions.isEmpty {
+                if allSessions.isEmpty {
                     Text("No sessions yet")
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(Array(recentSessions.enumerated()), id: \.element.id) { index, session in
-                            SessionRow(session: session, isExpanded: selectedSession?.id == session.id)
+                        ForEach(Array(allSessions.enumerated()), id: \.element.id) { index, session in
+                            SessionRow(session: session, isExpanded: selectedSessionID == session.id)
                                 .onTapGesture {
                                     withAnimation {
-                                        if selectedSession?.id == session.id {
-                                            selectedSession = nil
+                                        if selectedSessionID == session.id {
+                                            selectedSessionID = nil
                                         } else {
-                                            selectedSession = session
+                                            selectedSessionID = session.id
                                         }
                                     }
                                 }
 
-                            if index < recentSessions.count - 1 {
+                            if index < allSessions.count - 1 {
                                 Divider()
                             }
                         }
@@ -216,21 +222,22 @@ struct StatisticsView: View {
         }
     }
 
-    // MARK: - Data Loading
+    // MARK: - Data Computation
 
-    private func loadStatistics() async {
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            let service = StatisticsService(modelContainer: modelContext.container)
-            statistics = try await service.fetchStatistics()
-            recentSessions = try await service.fetchAllSessions()
-            isLoading = false
-        } catch {
-            errorMessage = "Failed to load statistics: \(error.localizedDescription)"
-            isLoading = false
+    private func computeStatistics() {
+        guard !allSessions.isEmpty else {
+            statistics = CleaningStatistics(totalSizeCleaned: 0, sessionCount: 0, totalItemsCleaned: 0)
+            return
         }
+
+        let totalSize = allSessions.reduce(0) { $0 + $1.totalSize }
+        let totalItems = allSessions.reduce(0) { $0 + $1.itemCount }
+
+        statistics = CleaningStatistics(
+            totalSizeCleaned: totalSize,
+            sessionCount: allSessions.count,
+            totalItemsCleaned: totalItems
+        )
     }
 }
 
