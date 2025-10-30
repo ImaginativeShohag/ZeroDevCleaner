@@ -11,6 +11,7 @@ struct MainView: View {
     @State private var viewModel = MainViewModel()
     @State private var locationManager = ScanLocationManager()
     @State private var showingSettings = false
+    @State private var showingAbout = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -116,6 +117,15 @@ struct MainView: View {
                 .keyboardShortcut(",", modifiers: .command)
             }
 
+            // About button
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingAbout = true
+                } label: {
+                    Label("About", systemImage: "info.circle")
+                }
+            }
+
             // Exit button
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -129,6 +139,9 @@ struct MainView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView(locationManager: locationManager)
         }
+        .sheet(isPresented: $showingAbout) {
+            AboutSheet()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .startScan)) { _ in
             if !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
@@ -136,6 +149,9 @@ struct MainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in
             showingSettings = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAbout)) { _ in
+            showingAbout = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in
             if !viewModel.scanResults.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {

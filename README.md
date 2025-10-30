@@ -245,10 +245,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [ ] Add more project type support (Flutter, Rust, Go, etc.)
 - [ ] Statistics dashboard showing cleaned space over time
-- [ ] Export scan results to CSV
 - [ ] Scheduled automatic scans
-- [ ] Dark mode optimization
-- [ ] Localization support
 
 ---
 

@@ -19,6 +19,13 @@ struct ZeroDevCleanerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
 
+            // Add About to app menu
+            CommandGroup(replacing: .appInfo) {
+                Button("About ZeroDevCleaner") {
+                    NotificationCenter.default.post(name: .openAbout, object: nil)
+                }
+            }
+
             // Add Settings to app menu
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {
@@ -69,4 +76,5 @@ extension Notification.Name {
     static let deselectAll = Notification.Name("deselectAll")
     static let deleteSelected = Notification.Name("deleteSelected")
     static let openSettings = Notification.Name("openSettings")
+    static let openAbout = Notification.Name("openAbout")
 }
