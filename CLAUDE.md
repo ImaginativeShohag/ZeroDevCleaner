@@ -75,16 +75,21 @@
 - ✅ Comprehensive README.md with features, installation, usage, architecture
 - ✅ MIT LICENSE file with proper copyright
 - ✅ CONTRIBUTING.md with development guidelines, commit conventions, PR process
-- ✅ CODE_OF_CONDUCT.md placeholder
+- ✅ CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- ✅ GitHub Actions CI/CD for automated builds and releases
 - ✅ Well-documented codebase with clear architecture
 - ✅ Ready for public GitHub repository
 
+**CI/CD Setup:**
+- ✅ Build Check workflow - Runs on push/PR to verify builds and tests
+- ✅ Release Build workflow - Automatically builds DMG on release creation
+- ✅ Automated artifact upload to GitHub releases
+
 **Remaining (Optional):**
 - Screenshots and demo GIF
-- GitHub Actions for CI
 - Create public GitHub repository
 
-**Commit**: `dcae446` - docs: update readme, license and contributing docs
+**Commits**: `dcae446`, `af06a3b`, `[pending]` - docs and CI/CD setup
 
 ---
 

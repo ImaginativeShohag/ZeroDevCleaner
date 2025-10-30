@@ -1,0 +1,79 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  build:
+    name: Build macOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build app
+        run: |
+          xcodebuild clean build \
+            -project ZeroDevCleaner.xcodeproj \
+            -scheme ZeroDevCleaner \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Locate built app
+        id: locate
+        run: |
+          APP_PATH=$(find ./build -name "ZeroDevCleaner.app" -type d | head -1)
+          echo "app_path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "Found app at: $APP_PATH"
+
+      - name: Create DMG
+        id: create_dmg
+        run: |
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg_temp
+          cp -R "${{ steps.locate.outputs.app_path }}" dmg_temp/
+
+          # Create DMG
+          hdiutil create -volname "ZeroDevCleaner" \
+            -srcfolder dmg_temp \
+            -ov -format UDZO \
+            ZeroDevCleaner.dmg
+
+          # Get version from Info.plist if available
+          VERSION=$(defaults read "${{ steps.locate.outputs.app_path }}/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "1.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Rename with version
+          mv ZeroDevCleaner.dmg "ZeroDevCleaner-v${VERSION}.dmg"
+          echo "dmg_file=ZeroDevCleaner-v${VERSION}.dmg" >> $GITHUB_OUTPUT
+
+      - name: Upload DMG to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ steps.create_dmg.outputs.dmg_file }}
+          asset_name: ${{ steps.create_dmg.outputs.dmg_file }}
+          asset_content_type: application/x-apple-diskimage
+
+      - name: Upload DMG as Artifact (for manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroDevCleaner-DMG
+          path: ./${{ steps.create_dmg.outputs.dmg_file }}
+          retention-days: 7

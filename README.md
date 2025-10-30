@@ -5,6 +5,7 @@
 ![macOS](https://img.shields.io/badge/macOS-15.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Build](https://github.com/yourusername/ZeroDevCleaner/workflows/Build%20Check/badge.svg)
 
 ZeroDevCleaner helps developers quickly identify and remove build artifacts, caches, and temporary files that accumulate during software development. With support for multiple project types and system caches, you can reclaim gigabytes of disk space in seconds.
 
@@ -44,11 +45,13 @@ _Coming soon_
 
 ## 🚀 Installation
 
-### Download
+### Download Pre-built Release
 1. Download the latest release from [Releases](https://github.com/yourusername/ZeroDevCleaner/releases)
 2. Open the `.dmg` file
 3. Drag **ZeroDevCleaner** to your Applications folder
 4. Launch from Applications
+
+> **Note**: Releases are automatically built and published via GitHub Actions when a new version is tagged.
 
 ### Build from Source
 ```bash
@@ -193,6 +196,30 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 - Comprehensive error handling
 - Detailed logging with OSLog
 - Component-based architecture (no ViewModels in reusable components)
+
+### CI/CD
+
+The project uses GitHub Actions for continuous integration:
+
+**Build Check** (`.github/workflows/build.yml`)
+- Runs on push to main and pull requests
+- Builds the project in Debug configuration
+- Runs unit tests (with error tolerance)
+- Ensures code compiles on latest macOS/Xcode
+
+**Release Build** (`.github/workflows/release.yml`)
+- Triggers when a new release is created
+- Builds the project in Release configuration
+- Creates a DMG file
+- Automatically uploads DMG to the release assets
+- Can be manually triggered for testing
+
+**Creating a Release:**
+1. Update version in Xcode project settings
+2. Commit and push changes
+3. Create a new tag: `git tag -a v1.0.0 -m "Release version 1.0.0"`
+4. Push tag: `git push origin v1.0.0`
+5. Create release on GitHub - CI will automatically build and attach DMG
 
 ## 📋 Requirements
 
