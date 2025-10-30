@@ -74,6 +74,7 @@ struct MainView: View {
             DeletionConfirmationView(
                 foldersToDelete: viewModel.selectedFolders,
                 staticLocationsToDelete: viewModel.selectedStaticLocations,
+                subItemsToDelete: viewModel.selectedSubItems,
                 totalSize: viewModel.formattedSelectedSize,
                 onConfirm: { viewModel.confirmDeletion() },
                 onCancel: { viewModel.showDeletionConfirmation = false }

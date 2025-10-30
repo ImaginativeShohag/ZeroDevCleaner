@@ -54,7 +54,22 @@ final class MainViewModel {
         }
     }
 
+    enum ResultsTab: String, CaseIterable, Sendable {
+        case buildFolders = "Build Folders"
+        case systemCaches = "System Caches"
+
+        var icon: String {
+            switch self {
+            case .buildFolders: return "folder.fill"
+            case .systemCaches: return "externaldrive.fill"
+            }
+        }
+    }
+
     // MARK: - State Properties
+
+    /// Current active tab
+    var currentTab: ResultsTab = .buildFolders
 
     /// Results from the last scan
     var scanResults: [BuildFolder] = [] {

@@ -10,12 +10,13 @@ import SwiftUI
 struct DeletionConfirmationView: View {
     let foldersToDelete: [BuildFolder]
     let staticLocationsToDelete: [StaticLocation]
+    let subItemsToDelete: [(location: StaticLocation, subItem: StaticLocationSubItem)]
     let totalSize: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
     private var totalItemCount: Int {
-        foldersToDelete.count + staticLocationsToDelete.count
+        foldersToDelete.count + staticLocationsToDelete.count + subItemsToDelete.count
     }
 
     var body: some View {
@@ -58,8 +59,27 @@ struct DeletionConfirmationView: View {
                             }
                         }
 
+                        // Then sub-items (e.g., individual DerivedData folders)
+                        let remainingSlots = 10 - min(5, staticLocationsToDelete.count)
+                        let subItemsToShow = Array(subItemsToDelete.prefix(remainingSlots))
+                        ForEach(subItemsToShow.indices, id: \.self) { index in
+                            let item = subItemsToShow[index]
+                            HStack {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.blue)
+                                Text(item.subItem.name)
+                                    .font(.callout)
+                                Spacer()
+                                Text(item.subItem.formattedSize)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
                         // Then build folders
-                        ForEach(Array(foldersToDelete.prefix(10 - min(5, staticLocationsToDelete.count)))) { folder in
+                        let subItemsShown = min(remainingSlots, subItemsToDelete.count)
+                        let buildFoldersToShow = remainingSlots - subItemsShown
+                        ForEach(Array(foldersToDelete.prefix(buildFoldersToShow))) { folder in
                             HStack {
                                 Image(systemName: folder.projectType.iconName)
                                     .foregroundStyle(folder.projectType.color)
@@ -150,6 +170,7 @@ struct DeletionConfirmationView: View {
             )
         ],
         staticLocationsToDelete: [],
+        subItemsToDelete: [],
         totalSize: "80 MB",
         onConfirm: {},
         onCancel: {}
