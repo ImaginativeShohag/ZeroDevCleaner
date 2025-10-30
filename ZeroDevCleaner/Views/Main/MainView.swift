@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @State private var viewModel = MainViewModel()
     @State private var locationManager = ScanLocationManager()
     @State private var showingSettings = false
     @State private var showingAbout = false
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         VStack(spacing: 0) {
@@ -167,6 +169,9 @@ struct MainView: View {
             if !viewModel.selectedFolders.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.showDeleteConfirmation()
             }
+        }
+        .onAppear {
+            viewModel.configureModelContext(modelContext)
         }
     }
 }

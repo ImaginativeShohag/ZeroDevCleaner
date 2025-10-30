@@ -6,9 +6,21 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct ZeroDevCleanerApp: App {
+    // SwiftData model container
+    let modelContainer: ModelContainer
+
+    init() {
+        do {
+            modelContainer = try ModelContainer(for: CleaningSession.self, CleanedItem.self)
+        } catch {
+            fatalError("Failed to initialize ModelContainer: \(error)")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             MainView()
@@ -16,6 +28,7 @@ struct ZeroDevCleanerApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultSize(width: 900, height: 600)
+        .modelContainer(modelContainer)
         .commands {
             CommandGroup(replacing: .newItem) { }
 

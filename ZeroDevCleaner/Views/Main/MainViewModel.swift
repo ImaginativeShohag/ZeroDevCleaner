@@ -8,6 +8,7 @@
 import SwiftUI
 import Observation
 import OSLog
+import SwiftData
 
 @Observable
 @MainActor
@@ -237,10 +238,12 @@ final class MainViewModel {
     private let scanner: FileScannerProtocol
     private let deleter: FileDeleterProtocol
     private let staticScanner: StaticLocationScannerProtocol
+    private var modelContext: ModelContext?
 
     // MARK: - Private Properties
 
     private var scanTask: Task<Void, Never>?
+    private var deletionStartTime: Date?
 
     // MARK: - Initialization
 
@@ -266,6 +269,11 @@ final class MainViewModel {
         let staticScanner = StaticLocationScanner()
 
         self.init(scanner: scanner, deleter: deleter, staticScanner: staticScanner)
+    }
+
+    /// Configures the model context for statistics tracking
+    func configureModelContext(_ context: ModelContext) {
+        self.modelContext = context
     }
 
     // MARK: - Scanning
@@ -672,6 +680,7 @@ final class MainViewModel {
         deletedItemCount = 0
         deletedSize = 0
         currentDeletionItem = ""
+        deletionStartTime = Date()  // Track start time for statistics
 
         Task {
             do {
@@ -720,6 +729,14 @@ final class MainViewModel {
                 }
 
                 Logger.deletion.info("Successfully deleted \(totalItemsToDelete) items")
+
+                // Save statistics to SwiftData
+                await self.saveCleaningStatistics(
+                    folders: foldersToDelete,
+                    staticLocations: staticToDelete,
+                    subItems: subItemsToDelete
+                )
+
                 self.isDeleting = false
                 self.showDeletionProgress = false
             } catch let error as ZeroDevCleanerError {
@@ -764,6 +781,77 @@ final class MainViewModel {
                 self.isDeleting = false
                 self.showDeletionProgress = false
             }
+        }
+    }
+
+    // MARK: - Statistics
+
+    /// Saves cleaning statistics to SwiftData
+    private func saveCleaningStatistics(
+        folders: [BuildFolder],
+        staticLocations: [StaticLocation],
+        subItems: [(location: StaticLocation, subItem: StaticLocationSubItem)]
+    ) async {
+        guard let modelContext = modelContext,
+              let startTime = deletionStartTime else {
+            print("Cannot save statistics: modelContext or startTime not available")
+            return
+        }
+
+        let duration = Date().timeIntervalSince(startTime)
+        let totalSize = folders.reduce(0) { $0 + $1.size } +
+                       staticLocations.reduce(0) { $0 + $1.size } +
+                       subItems.reduce(0) { $0 + $1.subItem.size }
+        let itemCount = folders.count + staticLocations.count + subItems.count
+
+        // Prepare items data
+        var items: [(name: String, itemType: String, projectType: String?, size: Int64, path: String)] = []
+
+        // Add build folders
+        for folder in folders {
+            items.append((
+                name: folder.projectName,
+                itemType: "Build Folder",
+                projectType: folder.projectType.displayName,
+                size: folder.size,
+                path: folder.path.path
+            ))
+        }
+
+        // Add static locations
+        for location in staticLocations {
+            items.append((
+                name: location.displayName,
+                itemType: "System Cache",
+                projectType: nil,
+                size: location.size,
+                path: location.path.path
+            ))
+        }
+
+        // Add sub-items
+        for (location, subItem) in subItems {
+            items.append((
+                name: subItem.name,
+                itemType: "System Cache (\(location.type.displayName))",
+                projectType: nil,
+                size: subItem.size,
+                path: subItem.path.path
+            ))
+        }
+
+        // Save statistics using StatisticsService
+        do {
+            let service = StatisticsService(modelContainer: modelContext.container)
+            try await service.saveCleaningSession(
+                totalSize: totalSize,
+                itemCount: itemCount,
+                duration: duration,
+                items: items
+            )
+            print("Statistics saved: \(itemCount) items, \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)), \(String(format: "%.1fs", duration))")
+        } catch {
+            print("Failed to save statistics: \(error.localizedDescription)")
         }
     }
 
