@@ -40,7 +40,7 @@ ZeroDevCleaner helps developers quickly identify and remove build artifacts, cac
 - 🚀 **Auto-Scan** - Automatically scans configured locations and system caches
 - ⌨️ **Keyboard Shortcuts** - Efficient workflow with keyboard support
 - 🔄 **Persistent Settings** - Remembers your scan locations
-- 📈 **Statistics Dashboard** - Track cleaning history with charts and insights
+- 📈 **Statistics on Home Screen** - Track cleaning history at a glance with sidebar display
 
 ## 📸 Screenshots
 
@@ -103,7 +103,6 @@ Then build and run with Xcode (⌘R)
 |--------|----------|
 | Scan | `Cmd+R` |
 | Settings | `Cmd+,` |
-| Statistics | `Cmd+Shift+S` |
 | Select All | `Cmd+A` |
 | Deselect All | `Cmd+D` |
 | Delete Selected | `Cmd+Delete` |
@@ -248,7 +247,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [x] Statistics dashboard showing cleaned space over time
+- [x] Statistics on home screen showing cleaned space and history
 - [ ] Scheduled automatic scans
 - [ ] Export scan results to CSV
 - [ ] Advanced filtering and search capabilities
