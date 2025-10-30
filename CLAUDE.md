@@ -170,6 +170,21 @@
 
 **Total Project Types Supported:** 7 (Android, iOS, Swift Package, Flutter, Node.js, Rust, Python)
 
+### UI/UX Improvements & Bug Fixes ✅ COMPLETE!
+**Goal**: Fix UI layout issues and improve scan coverage
+
+**Completed Features:**
+- ✅ **Filter Picker Layout Fix** - Fixed overflow issue on smaller windows by adjusting frame constraints (minWidth: 200, idealWidth: 300, maxWidth: 350)
+- ✅ **Nested Build Folder Detection** - Scanner now continues scanning inside detected build folders to find nested artifacts (e.g., Android build folders inside node_modules)
+- ✅ **Collapsible DerivedData** - DerivedData now shows as an expandable list with individual project folders, each displaying size and last modified date
+  - Added `StaticLocationSubItem` model for sub-folders
+  - Added `supportsSubItems` property to `StaticLocationType`
+  - Implemented `scanSubItems()` method in `StaticLocationScanner`
+  - Added chevron disclosure UI with expansion state management
+  - Sub-items sorted by size (largest first)
+
+**Commit**: `5c7c637` - fix: improve scan results and UI layout
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -212,8 +227,9 @@
 **Feature 3**: UX Refactoring - Streamlined Workflow ✅
 **Feature 4**: Open Source Preparation ✅
 **Feature 5**: Additional Project Types (Flutter, Node.js, Rust, Python) ✅
+**Feature 6**: UI/UX Improvements & Bug Fixes ✅
 
-**Total Commits**: 40
+**Total Commits**: 41
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
