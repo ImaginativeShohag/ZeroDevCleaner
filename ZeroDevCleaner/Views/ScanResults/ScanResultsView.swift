@@ -14,18 +14,33 @@ struct ScanResultsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab Picker
-            Picker("", selection: $viewModel.currentTab) {
+            // Custom Tab Bar
+            HStack(spacing: 0) {
                 ForEach(MainViewModel.ResultsTab.allCases, id: \.self) { tab in
-                    HStack(spacing: 6) {
-                        Image(systemName: tab.icon)
-                        Text(tab.rawValue)
+                    Button {
+                        viewModel.currentTab = tab
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 14))
+                            Text(tab.rawValue)
+                                .font(.subheadline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(viewModel.currentTab == tab ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .foregroundStyle(viewModel.currentTab == tab ? Color.accentColor : Color.primary)
+                        .contentShape(Rectangle())
                     }
-                    .tag(tab)
+                    .buttonStyle(.plain)
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .background(Color(nsColor: .controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            )
             .padding(.horizontal)
             .padding(.vertical, 12)
 
