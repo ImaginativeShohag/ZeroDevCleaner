@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 import OSLog
 
 final class FileDeleter: FileDeleterProtocol {
@@ -37,7 +36,7 @@ final class FileDeleter: FileDeleterProtocol {
             logger.info("Deleting item \(index + 1)/\(urls.count): \(url.path, privacy: .public)")
 
             do {
-                try await deleteSingleItem(at: url)
+                try deleteSingleItem(at: url)
                 logger.info("Successfully deleted: \(url.path, privacy: .public)")
             } catch {
                 // Log the actual error
@@ -71,44 +70,37 @@ final class FileDeleter: FileDeleterProtocol {
         logger.info("All \(urls.count) item(s) deleted successfully")
     }
 
-    private nonisolated func deleteSingleItem(at url: URL) async throws {
+    private nonisolated func deleteSingleItem(at url: URL) throws {
         // Create a local logger for nonisolated context
         let deletionLogger = Logger(subsystem: "com.shohag.ZeroDevCleaner", category: "deletion")
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            // Must use MainActor for NSWorkspace
-            Task { @MainActor in
-                // Verify item exists before attempting deletion
-                guard self.fileManager.fileExists(atPath: url.path) else {
-                    deletionLogger.error("Item does not exist: \(url.path, privacy: .public)")
-                    continuation.resume(throwing: ZeroDevCleanerError.fileNotFound(url))
-                    return
-                }
+        // Verify item exists before attempting deletion
+        guard fileManager.fileExists(atPath: url.path) else {
+            deletionLogger.error("Item does not exist: \(url.path, privacy: .public)")
+            throw ZeroDevCleanerError.fileNotFound(url)
+        }
 
-                // Check if we can read the item
-                guard self.fileManager.isReadableFile(atPath: url.path) else {
-                    deletionLogger.error("Item is not readable: \(url.path, privacy: .public)")
-                    continuation.resume(throwing: ZeroDevCleanerError.permissionDenied(url))
-                    return
-                }
+        // Check if we can read the item
+        guard fileManager.isReadableFile(atPath: url.path) else {
+            deletionLogger.error("Item is not readable: \(url.path, privacy: .public)")
+            throw ZeroDevCleanerError.permissionDenied(url)
+        }
 
-                deletionLogger.debug("Attempting to recycle using NSWorkspace: \(url.path, privacy: .public)")
+        deletionLogger.debug("Attempting to trash item using FileManager: \(url.path, privacy: .public)")
 
-                // Use NSWorkspace.recycle which is better for user-facing deletion
-                // This properly handles permissions and shows the item in Trash
-                NSWorkspace.shared.recycle([url]) { trashedItems, error in
-                    if let error = error {
-                        deletionLogger.error("NSWorkspace.recycle failed for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                        continuation.resume(throwing: ZeroDevCleanerError.deletionFailed(url, error))
-                    } else if let trashedURL = trashedItems[url] {
-                        deletionLogger.debug("Successfully recycled to: \(trashedURL.path, privacy: .public)")
-                        continuation.resume()
-                    } else {
-                        deletionLogger.error("Recycle succeeded but no trashed URL returned for \(url.path, privacy: .public)")
-                        continuation.resume(throwing: ZeroDevCleanerError.deletionFailed(url, NSError(domain: "ZeroDevCleaner", code: -1, userInfo: [NSLocalizedDescriptionKey: "No trashed URL returned"])))
-                    }
-                }
+        // Use FileManager.trashItem which is the modern API for moving items to trash
+        var trashedURL: NSURL?
+        do {
+            try fileManager.trashItem(at: url, resultingItemURL: &trashedURL)
+
+            if let trashedPath = trashedURL?.path {
+                deletionLogger.debug("Successfully moved to trash: \(trashedPath, privacy: .public)")
+            } else {
+                deletionLogger.debug("Successfully moved to trash: \(url.path, privacy: .public)")
             }
+        } catch {
+            deletionLogger.error("FileManager.trashItem failed for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            throw ZeroDevCleanerError.deletionFailed(url, error)
         }
     }
 }
