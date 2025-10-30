@@ -12,7 +12,9 @@
 - ✅ 60+ tests passing
 - ✅ Static cache locations support (DerivedData, Gradle, CocoaPods, npm, yarn, Carthage)
 - ✅ Settings panel with multiple scan locations
-- ✅ "Scan All" functionality for saved locations
+- ✅ Streamlined UX with auto-scan of system caches
+- ✅ Drag & drop support in Settings for adding locations
+- ✅ Finder integration for static locations
 
 ---
 
@@ -51,7 +53,22 @@
 
 **Commit**: `8f54499` - feat: add settings panel for multiple scan locations
 
-#### 3. Open Source Preparation (3-5 hours)
+#### 3. ✅ UX Refactoring - Streamlined Workflow (COMPLETE!)
+**Goal**: Simplify user flow to: Open → Scan → Clean → Exit
+
+**Completed Changes:**
+- ✅ Removed manual folder selection workflow
+- ✅ Auto-scan all configured locations + system caches on every scan
+- ✅ Drag & drop in Settings for easy location management
+- ✅ Simplified toolbar (Scan, Settings, Exit buttons only)
+- ✅ "Show in Finder" integration for static locations
+- ✅ Removed 150+ lines of unnecessary code
+- ✅ Added keyboard shortcuts (Cmd+R: Scan, Cmd+,: Settings, Cmd+Q: Exit)
+- ✅ Empty state guides users to Settings when no locations configured
+
+**Commit**: `32a97d1` - refactor: streamline UX flow and simplify UI
+
+#### 4. Open Source Preparation (3-5 hours)
 **Goal**: Prepare project for open source release
 
 **Tasks:**
