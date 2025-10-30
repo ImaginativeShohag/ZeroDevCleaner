@@ -147,14 +147,13 @@ struct ScanResultsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Picker("Filter", selection: $viewModel.currentFilter) {
+                Picker("", selection: $viewModel.currentFilter) {
                     ForEach(MainViewModel.FilterType.allCases, id: \.self) { filter in
                         Label(filter.rawValue, systemImage: filter.icon)
                             .tag(filter)
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(minWidth: 200, idealWidth: 300, maxWidth: 350)
 
                 Spacer()
 
