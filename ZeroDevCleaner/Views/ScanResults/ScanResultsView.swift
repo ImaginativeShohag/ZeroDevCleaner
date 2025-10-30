@@ -11,6 +11,7 @@ struct ScanResultsView: View {
     @Bindable var viewModel: MainViewModel
     let onShowInFinder: (BuildFolder) -> Void
     @State private var expandedStaticLocations: Set<UUID> = []
+    @State private var expandedSubItems: Set<UUID> = []  // For nested items like archive app groups
 
     var body: some View {
         VStack(spacing: 0) {
@@ -467,69 +468,194 @@ struct ScanResultsView: View {
                                 if expandedStaticLocations.contains(location.id) && !location.subItems.isEmpty {
                                     VStack(spacing: 4) {
                                         ForEach(location.subItems) { subItem in
-                                            HStack(spacing: 12) {
-                                                Spacer()
-                                                    .frame(width: 20)
+                                            // Check if this sub-item has its own sub-items (e.g., archive app groups)
+                                            if !subItem.subItems.isEmpty {
+                                                // Nested disclosure group for app groups
+                                                VStack(spacing: 0) {
+                                                    // App group header
+                                                    HStack(spacing: 12) {
+                                                        Spacer()
+                                                            .frame(width: 20)
 
-                                                Toggle("", isOn: Binding(
-                                                    get: { subItem.isSelected },
-                                                    set: { _ in viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id) }
-                                                ))
-                                                .toggleStyle(.checkbox)
-                                                .labelsHidden()
+                                                        // Chevron for expand/collapse
+                                                        Image(systemName: expandedSubItems.contains(subItem.id) ? "chevron.down" : "chevron.right")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.secondary)
+                                                            .frame(width: 12)
+                                                            .onTapGesture {
+                                                                toggleSubItemExpansion(for: subItem.id)
+                                                            }
 
-                                                Image(systemName: "folder.fill")
-                                                    .foregroundStyle(.secondary)
-                                                    .font(.caption)
-                                                    .frame(width: 16)
+                                                        Image(systemName: "folder.fill.badge.gearshape")
+                                                            .foregroundStyle(.secondary)
+                                                            .font(.caption)
+                                                            .frame(width: 16)
 
-                                                Text(subItem.name)
-                                                    .font(.caption)
-                                                    .lineLimit(1)
-                                                    .truncationMode(.middle)
+                                                        Text(subItem.name)
+                                                            .font(.caption)
+                                                            .fontWeight(.medium)
+                                                            .lineLimit(1)
+                                                            .truncationMode(.middle)
 
-                                                Spacer()
+                                                        Spacer()
 
-                                                Text(subItem.formattedSize)
-                                                    .font(.caption)
-                                                    .monospacedDigit()
-                                                    .foregroundStyle(.tertiary)
+                                                        Text(subItem.formattedSize)
+                                                            .font(.caption2)
+                                                            .monospacedDigit()
+                                                            .foregroundStyle(.tertiary)
 
-                                                Text(subItem.formattedLastModified)
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.quaternary)
-                                                    .frame(width: 80, alignment: .trailing)
+                                                        Text("\(subItem.subItems.count) versions")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.quaternary)
+                                                            .frame(width: 80, alignment: .trailing)
+                                                    }
+                                                    .padding(.vertical, 6)
+                                                    .padding(.horizontal, 12)
+                                                    .background(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+                                                    .cornerRadius(6)
+                                                    .rowHoverEffect()
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        toggleSubItemExpansion(for: subItem.id)
+                                                    }
 
-                                                Button {
-                                                    NSWorkspace.shared.selectFile(
-                                                        subItem.path.path,
-                                                        inFileViewerRootedAtPath: subItem.path.deletingLastPathComponent().path
-                                                    )
-                                                } label: {
-                                                    Image(systemName: "arrow.up.forward.app")
-                                                        .foregroundStyle(.blue)
+                                                    // Nested version items (if expanded)
+                                                    if expandedSubItems.contains(subItem.id) {
+                                                        VStack(spacing: 4) {
+                                                            ForEach(subItem.subItems) { versionItem in
+                                                                HStack(spacing: 12) {
+                                                                    Spacer()
+                                                                        .frame(width: 52)  // Extra indent for nested items
+
+                                                                    Toggle("", isOn: Binding(
+                                                                        get: { versionItem.isSelected },
+                                                                        set: { _ in viewModel.toggleNestedSubItemSelection(for: location, subItemId: subItem.id, nestedItemId: versionItem.id) }
+                                                                    ))
+                                                                    .toggleStyle(.checkbox)
+                                                                    .labelsHidden()
+
+                                                                    Image(systemName: "archivebox")
+                                                                        .foregroundStyle(.tertiary)
+                                                                        .font(.caption2)
+                                                                        .frame(width: 14)
+
+                                                                    Text(versionItem.name)
+                                                                        .font(.caption2)
+                                                                        .lineLimit(1)
+                                                                        .truncationMode(.middle)
+
+                                                                    Spacer()
+
+                                                                    Text(versionItem.formattedSize)
+                                                                        .font(.caption2)
+                                                                        .monospacedDigit()
+                                                                        .foregroundStyle(.tertiary)
+
+                                                                    Button {
+                                                                        NSWorkspace.shared.selectFile(
+                                                                            versionItem.path.path,
+                                                                            inFileViewerRootedAtPath: versionItem.path.deletingLastPathComponent().path
+                                                                        )
+                                                                    } label: {
+                                                                        Image(systemName: "arrow.up.forward.app")
+                                                                            .foregroundStyle(.blue)
+                                                                            .font(.caption2)
+                                                                    }
+                                                                    .buttonStyle(.plain)
+                                                                    .help("Show in Finder")
+                                                                    .hoverEffect(scale: 1.1, brightness: 0.1)
+                                                                }
+                                                                .padding(.vertical, 5)
+                                                                .padding(.horizontal, 12)
+                                                                .background(Color(nsColor: .controlBackgroundColor).opacity(0.2))
+                                                                .cornerRadius(4)
+                                                                .rowHoverEffect()
+                                                                .contextMenu {
+                                                                    Button("Show in Finder") {
+                                                                        NSWorkspace.shared.selectFile(
+                                                                            versionItem.path.path,
+                                                                            inFileViewerRootedAtPath: versionItem.path.deletingLastPathComponent().path
+                                                                        )
+                                                                    }
+
+                                                                    Button("Copy Path") {
+                                                                        NSPasteboard.general.clearContents()
+                                                                        NSPasteboard.general.setString(versionItem.path.path, forType: .string)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        .padding(.leading, 24)
+                                                        .padding(.top, 4)
+                                                        .padding(.bottom, 4)
+                                                    }
+                                                }
+                                            } else {
+                                                // Regular sub-item (no nesting)
+                                                HStack(spacing: 12) {
+                                                    Spacer()
+                                                        .frame(width: 20)
+
+                                                    Toggle("", isOn: Binding(
+                                                        get: { subItem.isSelected },
+                                                        set: { _ in viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id) }
+                                                    ))
+                                                    .toggleStyle(.checkbox)
+                                                    .labelsHidden()
+
+                                                    Image(systemName: "folder.fill")
+                                                        .foregroundStyle(.secondary)
                                                         .font(.caption)
-                                                }
-                                                .buttonStyle(.plain)
-                                                .help("Show in Finder")
-                                                .hoverEffect(scale: 1.1, brightness: 0.1)
-                                            }
-                                            .padding(.vertical, 6)
-                                            .padding(.horizontal, 12)
-                                            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-                                            .cornerRadius(6)
-                                            .rowHoverEffect()
-                                            .contextMenu {
-                                                Button("Show in Finder") {
-                                                    NSWorkspace.shared.selectFile(
-                                                        subItem.path.path,
-                                                        inFileViewerRootedAtPath: subItem.path.deletingLastPathComponent().path
-                                                    )
-                                                }
+                                                        .frame(width: 16)
 
-                                                Button("Copy Path") {
-                                                    NSPasteboard.general.clearContents()
-                                                    NSPasteboard.general.setString(subItem.path.path, forType: .string)
+                                                    Text(subItem.name)
+                                                        .font(.caption)
+                                                        .lineLimit(1)
+                                                        .truncationMode(.middle)
+
+                                                    Spacer()
+
+                                                    Text(subItem.formattedSize)
+                                                        .font(.caption)
+                                                        .monospacedDigit()
+                                                        .foregroundStyle(.tertiary)
+
+                                                    Text(subItem.formattedLastModified)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.quaternary)
+                                                        .frame(width: 80, alignment: .trailing)
+
+                                                    Button {
+                                                        NSWorkspace.shared.selectFile(
+                                                            subItem.path.path,
+                                                            inFileViewerRootedAtPath: subItem.path.deletingLastPathComponent().path
+                                                        )
+                                                    } label: {
+                                                        Image(systemName: "arrow.up.forward.app")
+                                                            .foregroundStyle(.blue)
+                                                            .font(.caption)
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .help("Show in Finder")
+                                                    .hoverEffect(scale: 1.1, brightness: 0.1)
+                                                }
+                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 12)
+                                                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                                                .cornerRadius(6)
+                                                .rowHoverEffect()
+                                                .contextMenu {
+                                                    Button("Show in Finder") {
+                                                        NSWorkspace.shared.selectFile(
+                                                            subItem.path.path,
+                                                            inFileViewerRootedAtPath: subItem.path.deletingLastPathComponent().path
+                                                        )
+                                                    }
+
+                                                    Button("Copy Path") {
+                                                        NSPasteboard.general.clearContents()
+                                                        NSPasteboard.general.setString(subItem.path.path, forType: .string)
+                                                    }
                                                 }
                                             }
                                         }
@@ -582,6 +708,10 @@ struct ScanResultsView: View {
             // Also select all sub-items
             for subIndex in viewModel.staticLocations[index].subItems.indices {
                 viewModel.staticLocations[index].subItems[subIndex].isSelected = true
+                // Also select nested sub-items (archive versions)
+                for nestedIndex in viewModel.staticLocations[index].subItems[subIndex].subItems.indices {
+                    viewModel.staticLocations[index].subItems[subIndex].subItems[nestedIndex].isSelected = true
+                }
             }
         }
     }
@@ -592,6 +722,10 @@ struct ScanResultsView: View {
             // Also deselect all sub-items
             for subIndex in viewModel.staticLocations[index].subItems.indices {
                 viewModel.staticLocations[index].subItems[subIndex].isSelected = false
+                // Also deselect nested sub-items (archive versions)
+                for nestedIndex in viewModel.staticLocations[index].subItems[subIndex].subItems.indices {
+                    viewModel.staticLocations[index].subItems[subIndex].subItems[nestedIndex].isSelected = false
+                }
             }
         }
     }
@@ -605,6 +739,14 @@ struct ScanResultsView: View {
             expandedStaticLocations.remove(locationId)
         } else {
             expandedStaticLocations.insert(locationId)
+        }
+    }
+
+    private func toggleSubItemExpansion(for subItemId: UUID) {
+        if expandedSubItems.contains(subItemId) {
+            expandedSubItems.remove(subItemId)
+        } else {
+            expandedSubItems.insert(subItemId)
         }
     }
 }

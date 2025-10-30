@@ -124,6 +124,7 @@ struct StaticLocationSubItem: Identifiable, Hashable {
     let size: Int64
     let lastModified: Date
     var isSelected: Bool = false
+    var subItems: [StaticLocationSubItem] = []  // For nested items (e.g., app versions in archives)
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
@@ -133,6 +134,22 @@ struct StaticLocationSubItem: Identifiable, Hashable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: lastModified, relativeTo: Date())
+    }
+
+    /// Returns selected sub-items
+    var selectedSubItems: [StaticLocationSubItem] {
+        subItems.filter(\.isSelected)
+    }
+
+    /// Returns true if all sub-items are selected
+    var allSubItemsSelected: Bool {
+        !subItems.isEmpty && subItems.allSatisfy(\.isSelected)
+    }
+
+    /// Returns true if some (but not all) sub-items are selected
+    var someSubItemsSelected: Bool {
+        let selectedCount = selectedSubItems.count
+        return selectedCount > 0 && selectedCount < subItems.count
     }
 }
 

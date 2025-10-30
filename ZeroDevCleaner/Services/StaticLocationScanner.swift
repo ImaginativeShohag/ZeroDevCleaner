@@ -91,9 +91,12 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
     private func scanSubItems(at parentPath: URL, type: StaticLocationType) async throws -> [StaticLocationSubItem] {
         var subItems: [StaticLocationSubItem] = []
 
-        // For Xcode Archives, we need to scan through date-based subfolders
+        // For Xcode Archives, we need to scan through date-based subfolders and group by app name
         // Structure: Archives/2025-10-27/AppName 27-10-25, 5.12 PM.xcarchive
         if type == .xcodeArchives {
+            // Dictionary to group archives by app name
+            var archivesByApp: [String: [ArchiveInfo]] = [:]
+
             let dateFolders = try fileManager.contentsOfDirectory(
                 at: parentPath,
                 includingPropertiesForKeys: [.isDirectoryKey],
@@ -120,21 +123,51 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                     let size = try await sizeCalculator.calculateSize(of: archiveURL)
                     let lastModified = archiveResourceValues.contentModificationDate ?? Date()
 
-                    let displayName = parseArchiveName(from: archiveURL) ?? archiveURL.lastPathComponent
-
-                    let subItem = StaticLocationSubItem(
-                        name: displayName,
-                        path: archiveURL,
-                        size: size,
-                        lastModified: lastModified
-                    )
-
-                    subItems.append(subItem)
+                    // Parse archive metadata
+                    if let archiveInfo = parseArchiveInfo(from: archiveURL, size: size, lastModified: lastModified) {
+                        archivesByApp[archiveInfo.appName, default: []].append(archiveInfo)
+                    }
                 }
             }
 
-            // Sort by last modified date (newest first)
-            return subItems.sorted { $0.lastModified > $1.lastModified }
+            // Create grouped structure: App Name -> Versions
+            for (appName, archives) in archivesByApp {
+                // Sort versions by date (newest first)
+                let sortedArchives = archives.sorted { $0.lastModified > $1.lastModified }
+
+                // Calculate total size for this app (all versions)
+                let totalSize = sortedArchives.reduce(0) { $0 + $1.size }
+
+                // Get the most recent modification date
+                let mostRecentDate = sortedArchives.first?.lastModified ?? Date()
+
+                // Create version sub-items
+                let versionItems = sortedArchives.map { archive in
+                    StaticLocationSubItem(
+                        name: archive.versionDisplay,
+                        path: archive.path,
+                        size: archive.size,
+                        lastModified: archive.lastModified,
+                        isSelected: false,
+                        subItems: []
+                    )
+                }
+
+                // Create app group item with versions as sub-items
+                let appItem = StaticLocationSubItem(
+                    name: appName,
+                    path: sortedArchives.first!.path.deletingLastPathComponent(), // Use date folder as path
+                    size: totalSize,
+                    lastModified: mostRecentDate,
+                    isSelected: false,
+                    subItems: versionItems
+                )
+
+                subItems.append(appItem)
+            }
+
+            // Sort apps alphabetically
+            return subItems.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         }
 
         // For other types (DerivedData, Device Support), scan directly
@@ -176,6 +209,71 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
 
         // Sort by size (largest first) for non-archive types
         return subItems.sorted { $0.size > $1.size }
+    }
+
+    /// Archive information for grouping
+    private struct ArchiveInfo {
+        let appName: String
+        let version: String
+        let build: String?
+        let dateTime: String
+        let path: URL
+        let size: Int64
+        let lastModified: Date
+
+        var versionDisplay: String {
+            let versionPart = build.map { "\(version) (\($0))" } ?? version
+            return "\(versionPart) \(dateTime)"
+        }
+    }
+
+    /// Parses archive info including version and date/time from folder name
+    private func parseArchiveInfo(from archiveURL: URL, size: Int64, lastModified: Date) -> ArchiveInfo? {
+        // Read Info.plist for app name and version
+        let infoPlistPath = archiveURL.appendingPathComponent("Info.plist")
+
+        guard fileManager.fileExists(atPath: infoPlistPath.path),
+              let plistData = try? Data(contentsOf: infoPlistPath),
+              let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+              let properties = plist["ApplicationProperties"] as? [String: Any],
+              let appName = properties["CFBundleName"] as? String ?? properties["CFBundleDisplayName"] as? String,
+              let version = properties["CFBundleShortVersionString"] as? String else {
+            return nil
+        }
+
+        let build = properties["CFBundleVersion"] as? String
+
+        // Extract date/time from folder name: "MacScreenShare 27-10-25, 5.12 PM.xcarchive"
+        let folderName = archiveURL.lastPathComponent
+        let dateTime = extractDateTime(from: folderName, appName: appName)
+
+        return ArchiveInfo(
+            appName: appName,
+            version: version,
+            build: build,
+            dateTime: dateTime,
+            path: archiveURL,
+            size: size,
+            lastModified: lastModified
+        )
+    }
+
+    /// Extracts date and time from archive folder name
+    /// Format: "AppName 27-10-25, 5.12 PM.xcarchive" -> "27/10/25, 5:12 PM"
+    private func extractDateTime(from folderName: String, appName: String) -> String {
+        // Remove .xcarchive extension
+        let nameWithoutExtension = folderName.replacingOccurrences(of: ".xcarchive", with: "")
+
+        // Remove app name from the beginning
+        let dateTimePart = nameWithoutExtension.replacingOccurrences(of: appName, with: "").trimmingCharacters(in: .whitespaces)
+
+        // Replace dashes with slashes and dots with colons for better readability
+        // "27-10-25, 5.12 PM" -> "27/10/25, 5:12 PM"
+        let formatted = dateTimePart
+            .replacingOccurrences(of: "-", with: "/")
+            .replacingOccurrences(of: ".", with: ":")
+
+        return formatted
     }
 
     /// Parses archive name to extract app name and version

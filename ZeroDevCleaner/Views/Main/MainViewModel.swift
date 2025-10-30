@@ -439,6 +439,26 @@ final class MainViewModel {
         }
     }
 
+    /// Toggles selection for a nested sub-item (e.g., archive version within app group)
+    func toggleNestedSubItemSelection(for location: StaticLocation, subItemId: UUID, nestedItemId: UUID) {
+        if let locationIndex = staticLocations.firstIndex(where: { $0.id == location.id }),
+           let subItemIndex = staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItemId }),
+           let nestedIndex = staticLocations[locationIndex].subItems[subItemIndex].subItems.firstIndex(where: { $0.id == nestedItemId }) {
+            // Toggle the nested item
+            staticLocations[locationIndex].subItems[subItemIndex].subItems[nestedIndex].isSelected.toggle()
+
+            // Update parent selection based on nested items
+            let allNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy(\.isSelected)
+            let noneNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy { !$0.isSelected }
+
+            if allNestedSelected {
+                staticLocations[locationIndex].subItems[subItemIndex].isSelected = true
+            } else if noneNestedSelected {
+                staticLocations[locationIndex].subItems[subItemIndex].isSelected = false
+            }
+        }
+    }
+
     // MARK: - Selection Management
 
     /// Sorts results by the given column
@@ -496,14 +516,23 @@ final class MainViewModel {
         staticLocations.filter(\.isSelected)
     }
 
-    /// Returns all selected sub-items across all static locations
+    /// Returns all selected sub-items across all static locations (including nested items)
     var selectedSubItems: [(location: StaticLocation, subItem: StaticLocationSubItem)] {
         var result: [(StaticLocation, StaticLocationSubItem)] = []
         for location in staticLocations where !location.isSelected {
             // Only include sub-items if parent is NOT selected
             // (if parent is selected, the whole location is deleted)
-            for subItem in location.subItems where subItem.isSelected {
-                result.append((location, subItem))
+            for subItem in location.subItems {
+                // Check if this sub-item has nested items (e.g., archive app groups)
+                if !subItem.subItems.isEmpty {
+                    // For app groups, collect selected versions
+                    for nestedItem in subItem.subItems where nestedItem.isSelected {
+                        result.append((location, nestedItem))
+                    }
+                } else if subItem.isSelected {
+                    // Regular sub-item
+                    result.append((location, subItem))
+                }
             }
         }
         return result
