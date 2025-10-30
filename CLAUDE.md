@@ -10,11 +10,14 @@
 - ✅ Full UI with filters, keyboard shortcuts, drag & drop
 - ✅ Error handling & comprehensive logging
 - ✅ 60+ tests passing
-- ✅ Static cache locations support (DerivedData, Gradle, CocoaPods, npm, yarn, Carthage)
+- ✅ Static cache locations support (DerivedData, Xcode Archives, Device Support, Gradle, CocoaPods, npm, Yarn, Carthage)
+- ✅ Collapsible sub-items with individual selection for DerivedData, Xcode Archives, and Device Support
 - ✅ Settings panel with multiple scan locations
 - ✅ Streamlined UX with auto-scan of system caches
 - ✅ Drag & drop support in Settings for adding locations
 - ✅ Finder integration for static locations
+- ✅ Tabbed interface separating Build Folders and System Caches
+- ✅ Intelligent archive and device name parsing
 
 ---
 
@@ -185,6 +188,61 @@
 
 **Commit**: `5c7c637` - fix: improve scan results and UI layout
 
+### Advanced System Caches & Tabbed Interface ✅ COMPLETE!
+**Goal**: Improve UX with tabbed interface and expand system cache support
+
+**Completed Features:**
+- ✅ **Sub-item Selection with Checkboxes** - DerivedData, Xcode Archives, and Device Support sub-items now individually selectable for granular deletion control
+  - Added `isSelected` property to `StaticLocationSubItem`
+  - Implemented `toggleSubItemSelection()` in `MainViewModel`
+  - Parent-child selection relationship logic
+  - Deletion confirmation shows selected sub-items with accurate size calculation
+
+- ✅ **Tabbed Results Interface** - Separated Build Folders and System Caches into distinct tabs for cleaner UX
+  - Added `ResultsTab` enum with `.buildFolders` and `.systemCaches` cases
+  - Custom button-based tab bar with icons (not Picker-based)
+  - Each tab has independent summary cards and action buttons
+  - `.contentShape(Rectangle())` for full tab area clickability
+
+- ✅ **Settings Menu Integration** - Added Settings to application menu with standard keyboard shortcut
+  - Added `CommandGroup(replacing: .appSettings)` in `ZeroDevCleanerApp`
+  - Cmd+, keyboard shortcut for Settings
+  - NotificationCenter-based menu command handling
+
+- ✅ **Real-time Scanning Progress** - Fixed scanning progress that was always showing zero
+  - Progress calculation: 0-80% for location scanning, 80-100% for static caches
+  - Real-time updates via progress handlers in `MainViewModel`
+  - Shows current path being scanned
+
+- ✅ **Xcode Archives & Device Support** - Added two new system cache locations with collapsible sub-lists
+  - Xcode Archives: `~/Library/Developer/Xcode/Archives`
+  - iOS Device Support: `~/Library/Developer/Xcode/iOS DeviceSupport`
+  - Both support expandable sub-item lists like DerivedData
+
+- ✅ **Archive Name Parsing** - Intelligent parsing of archive metadata
+  - Reads `Info.plist` from archive bundles
+  - Extracts app name, version, and build number
+  - Format: "AppName 1.0 (123)"
+  - Implemented `parseArchiveName()` method in `StaticLocationScanner`
+
+- ✅ **Device Support Name Parsing** - Enhanced device support names with device model information
+  - Searches for `.plist` files containing device metadata
+  - Extracts `ProductType` (hardware identifier) or `DeviceName`
+  - Maps identifiers to human-readable names (e.g., "iPhone14,3" → "iPhone 13 Pro Max")
+  - Format: "iOS 15.0 (19A346) (iPhone 13 Pro Max)"
+  - Comprehensive device mapping for iPhone 8-15 series and iPad models
+  - Falls back to version-only format if device info not found
+  - Implemented `parseDeviceSupportName()` and `mapDeviceIdentifierToName()` methods
+
+**Commits**:
+- `5c7c637` - fix: improve scan results and UI layout
+- `[commit hash]` - feat: add sub-item selection with checkboxes
+- `[commit hash]` - feat: add tabbed interface for build folders and system caches
+- `[commit hash]` - feat: add Settings menu and fix scanning progress
+- `[commit hash]` - feat: add Xcode Archives and Device Support with sub-lists
+- `[commit hash]` - feat: parse archive names with version information
+- `7c7ae09` - feat: enhance Device Support names with device model
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -228,11 +286,13 @@
 **Feature 4**: Open Source Preparation ✅
 **Feature 5**: Additional Project Types (Flutter, Node.js, Rust, Python) ✅
 **Feature 6**: UI/UX Improvements & Bug Fixes ✅
+**Feature 7**: Advanced System Caches & Tabbed Interface ✅
 
-**Total Commits**: 41
+**Total Commits**: 42
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
+**System Cache Locations**: 8 (DerivedData, Xcode Archives, Device Support, Gradle, CocoaPods, npm, Yarn, Carthage)
 
 ---
 
