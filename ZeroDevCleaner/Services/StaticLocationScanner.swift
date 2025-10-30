@@ -89,13 +89,60 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
     }
 
     private func scanSubItems(at parentPath: URL, type: StaticLocationType) async throws -> [StaticLocationSubItem] {
+        var subItems: [StaticLocationSubItem] = []
+
+        // For Xcode Archives, we need to scan through date-based subfolders
+        // Structure: Archives/2025-10-27/AppName 27-10-25, 5.12 PM.xcarchive
+        if type == .xcodeArchives {
+            let dateFolders = try fileManager.contentsOfDirectory(
+                at: parentPath,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+
+            for dateFolder in dateFolders {
+                let resourceValues = try dateFolder.resourceValues(forKeys: [.isDirectoryKey])
+                guard resourceValues.isDirectory == true else { continue }
+
+                // Scan for .xcarchive files inside this date folder
+                let archives = try fileManager.contentsOfDirectory(
+                    at: dateFolder,
+                    includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+                    options: [.skipsHiddenFiles]
+                )
+
+                for archiveURL in archives {
+                    guard archiveURL.pathExtension == "xcarchive" else { continue }
+
+                    let archiveResourceValues = try archiveURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+                    guard archiveResourceValues.isDirectory == true else { continue }
+
+                    let size = try await sizeCalculator.calculateSize(of: archiveURL)
+                    let lastModified = archiveResourceValues.contentModificationDate ?? Date()
+
+                    let displayName = parseArchiveName(from: archiveURL) ?? archiveURL.lastPathComponent
+
+                    let subItem = StaticLocationSubItem(
+                        name: displayName,
+                        path: archiveURL,
+                        size: size,
+                        lastModified: lastModified
+                    )
+
+                    subItems.append(subItem)
+                }
+            }
+
+            // Sort by last modified date (newest first)
+            return subItems.sorted { $0.lastModified > $1.lastModified }
+        }
+
+        // For other types (DerivedData, Device Support), scan directly
         let contents = try fileManager.contentsOfDirectory(
             at: parentPath,
             includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
             options: [.skipsHiddenFiles]
         )
-
-        var subItems: [StaticLocationSubItem] = []
 
         for itemURL in contents {
             let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
@@ -109,9 +156,6 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             // Format name based on type
             let displayName: String
             switch type {
-            case .xcodeArchives:
-                // Try to parse archive info to get app name and version
-                displayName = parseArchiveName(from: itemURL) ?? itemURL.lastPathComponent
             case .deviceSupport:
                 // Parse device support to show iOS version and device model
                 displayName = parseDeviceSupportName(from: itemURL) ?? itemURL.lastPathComponent
@@ -130,12 +174,8 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             subItems.append(subItem)
         }
 
-        // Sort by last modified date (newest first) for archives, size for others
-        if type == .xcodeArchives {
-            return subItems.sorted { $0.lastModified > $1.lastModified }
-        } else {
-            return subItems.sorted { $0.size > $1.size }
-        }
+        // Sort by size (largest first) for non-archive types
+        return subItems.sorted { $0.size > $1.size }
     }
 
     /// Parses archive name to extract app name and version
