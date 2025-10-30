@@ -13,7 +13,6 @@ struct MainView: View {
     @State private var locationManager = ScanLocationManager()
     @State private var showingSettings = false
     @State private var showingAbout = false
-    @State private var showingStatistics = false
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
@@ -39,7 +38,8 @@ struct MainView: View {
             } else {
                 ScanResultsView(
                     viewModel: viewModel,
-                    onShowInFinder: viewModel.showInFinder
+                    onShowInFinder: viewModel.showInFinder,
+                    onDone: viewModel.resetToHome
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
@@ -120,16 +120,6 @@ struct MainView: View {
                 .keyboardShortcut(",", modifiers: .command)
             }
 
-            // Statistics button
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    showingStatistics = true
-                } label: {
-                    Label("Statistics", systemImage: "chart.bar.fill")
-                }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-            }
-
             // About button
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -155,9 +145,6 @@ struct MainView: View {
         .sheet(isPresented: $showingAbout) {
             AboutSheet()
         }
-        .sheet(isPresented: $showingStatistics) {
-            StatisticsView()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .startScan)) { _ in
             if !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
@@ -168,9 +155,6 @@ struct MainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openAbout)) { _ in
             showingAbout = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openStatistics)) { _ in
-            showingStatistics = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in
             if !viewModel.scanResults.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {

@@ -10,11 +10,34 @@ import SwiftUI
 struct ScanResultsView: View {
     @Bindable var viewModel: MainViewModel
     let onShowInFinder: (BuildFolder) -> Void
+    let onDone: () -> Void
     @State private var expandedStaticLocations: Set<UUID> = []
     @State private var expandedSubItems: Set<UUID> = []  // For nested items like archive app groups
 
     var body: some View {
         VStack(spacing: 0) {
+            // Header with Done button
+            HStack {
+                Text("Scan Results")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                Button {
+                    onDone()
+                } label: {
+                    Label("Done", systemImage: "checkmark.circle.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonHoverEffect()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+
+            Divider()
+
             // Custom Tab Bar
             HStack(spacing: 0) {
                 ForEach(MainViewModel.ResultsTab.allCases, id: \.self) { tab in
@@ -814,6 +837,7 @@ struct ScanResultsView: View {
 
     return ScanResultsView(
         viewModel: viewModel,
-        onShowInFinder: { _ in }
+        onShowInFinder: { _ in },
+        onDone: {}
     )
 }

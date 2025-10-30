@@ -786,6 +786,16 @@ final class MainViewModel {
 
     // MARK: - Statistics
 
+    /// Resets to home screen by clearing all results
+    func resetToHome() {
+        Logger.scanning.info("Resetting to home screen")
+        scanResults = []
+        staticLocations = []
+        currentFilter = .all
+        scanProgress = 0.0
+        currentScanPath = ""
+    }
+
     /// Saves cleaning statistics to SwiftData
     private func saveCleaningStatistics(
         folders: [BuildFolder],
