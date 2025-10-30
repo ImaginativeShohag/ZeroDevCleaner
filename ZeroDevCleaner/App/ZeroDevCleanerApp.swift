@@ -59,6 +59,13 @@ struct ZeroDevCleanerApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
 
+            CommandMenu("View") {
+                Button("Statistics") {
+                    NotificationCenter.default.post(name: .openStatistics, object: nil)
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+            }
+
             CommandMenu("Selection") {
                 Button("Select All") {
                     NotificationCenter.default.post(name: .selectAll, object: nil)
@@ -90,4 +97,5 @@ extension Notification.Name {
     static let deleteSelected = Notification.Name("deleteSelected")
     static let openSettings = Notification.Name("openSettings")
     static let openAbout = Notification.Name("openAbout")
+    static let openStatistics = Notification.Name("openStatistics")
 }
