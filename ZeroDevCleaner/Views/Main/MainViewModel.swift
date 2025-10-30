@@ -19,6 +19,10 @@ final class MainViewModel {
         case android = "Android"
         case iOS = "iOS"
         case swiftPackage = "Swift Package"
+        case flutter = "Flutter"
+        case nodeJS = "Node.js"
+        case rust = "Rust"
+        case python = "Python"
 
         var icon: String {
             switch self {
@@ -26,6 +30,10 @@ final class MainViewModel {
             case .android: return "cube.fill"
             case .iOS: return "apple.logo"
             case .swiftPackage: return "shippingbox.fill"
+            case .flutter: return "wind"
+            case .nodeJS: return "atom"
+            case .rust: return "gearshape.2.fill"
+            case .python: return "chevron.left.forwardslash.chevron.right"
             }
         }
     }
@@ -49,40 +57,95 @@ final class MainViewModel {
     // MARK: - State Properties
 
     /// Results from the last scan
-    var scanResults: [BuildFolder] = []
+    var scanResults: [BuildFolder] = [] {
+        didSet { invalidateFilterCache() }
+    }
 
     /// Current filter type
-    var currentFilter: FilterType = .all
+    var currentFilter: FilterType = .all {
+        didSet { invalidateFilterCache() }
+    }
 
     /// Current sort column
-    var sortColumn: SortColumn = .size
+    var sortColumn: SortColumn = .size {
+        didSet { invalidateSortCache() }
+    }
 
     /// Current sort order
-    var sortOrder: SortOrder = .descending
+    var sortOrder: SortOrder = .descending {
+        didSet { invalidateSortCache() }
+    }
+
+    // MARK: - Performance: Cached Results
+
+    private var cachedFilteredResults: [BuildFolder]?
+    private var cachedFilter: FilterType?
+    private var cachedSortedResults: [BuildFolder]?
+    private var cachedSortColumn: SortColumn?
+    private var cachedSortOrder: SortOrder?
+
+    private func invalidateFilterCache() {
+        cachedFilteredResults = nil
+        cachedSortedResults = nil // Filter change invalidates sort too
+    }
+
+    private func invalidateSortCache() {
+        cachedSortedResults = nil
+    }
 
     /// Filtered results based on current filter
     var filteredResults: [BuildFolder] {
-        guard currentFilter != .all else { return scanResults }
+        // Return cached result if filter unchanged
+        if let cached = cachedFilteredResults, cachedFilter == currentFilter {
+            return cached
+        }
 
-        return scanResults.filter { folder in
-            switch currentFilter {
-            case .all:
-                return true
-            case .android:
-                return folder.projectType == .android
-            case .iOS:
-                return folder.projectType == .iOS
-            case .swiftPackage:
-                return folder.projectType == .swiftPackage
+        // Compute fresh results
+        let results: [BuildFolder]
+        if currentFilter == .all {
+            results = scanResults
+        } else {
+            results = scanResults.filter { folder in
+                switch currentFilter {
+                case .all:
+                    return true
+                case .android:
+                    return folder.projectType == .android
+                case .iOS:
+                    return folder.projectType == .iOS
+                case .swiftPackage:
+                    return folder.projectType == .swiftPackage
+                case .flutter:
+                    return folder.projectType == .flutter
+                case .nodeJS:
+                    return folder.projectType == .nodeJS
+                case .rust:
+                    return folder.projectType == .rust
+                case .python:
+                    return folder.projectType == .python
+                }
             }
         }
+
+        // Cache and return
+        cachedFilteredResults = results
+        cachedFilter = currentFilter
+        return results
     }
 
     /// Sorted and filtered results
     var sortedAndFilteredResults: [BuildFolder] {
+        // Return cached result if parameters unchanged
+        if let cached = cachedSortedResults,
+           cachedFilter == currentFilter,
+           cachedSortColumn == sortColumn,
+           cachedSortOrder == sortOrder {
+            return cached
+        }
+
         let filtered = filteredResults
 
-        return filtered.sorted { lhs, rhs in
+        let sorted = filtered.sorted { lhs, rhs in
             let result: Bool
             switch sortColumn {
             case .projectName:
@@ -96,6 +159,12 @@ final class MainViewModel {
             }
             return sortOrder == .ascending ? result : !result
         }
+
+        // Cache and return
+        cachedSortedResults = sorted
+        cachedSortColumn = sortColumn
+        cachedSortOrder = sortOrder
+        return sorted
     }
 
     /// Whether a scan is currently in progress
