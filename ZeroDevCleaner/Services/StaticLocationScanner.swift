@@ -162,38 +162,36 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
     }
 
     /// Parses device support name to show iOS version and device model
+    /// Folder format: "iPhone14,3 26.0.1 (23A355)" or "iPad11,1 26.0.1 (23A355)"
     private func parseDeviceSupportName(from deviceSupportURL: URL) -> String? {
         let folderName = deviceSupportURL.lastPathComponent
 
-        // Try to find device information in the folder
-        var deviceModel: String?
+        // Split by space to get components
+        // Format: "iPhone14,3 26.0.1 (23A355)"
+        let components = folderName.split(separator: " ")
 
-        // Look for .plist files that might contain device info
-        if let contents = try? fileManager.contentsOfDirectory(at: deviceSupportURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
-            for fileURL in contents {
-                // Check for device info in plist files
-                if fileURL.pathExtension == "plist" {
-                    if let plistData = try? Data(contentsOf: fileURL),
-                       let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any] {
-
-                        // Look for device name or model
-                        if let productType = plist["ProductType"] as? String {
-                            deviceModel = mapDeviceIdentifierToName(productType)
-                        } else if let deviceName = plist["DeviceName"] as? String {
-                            deviceModel = deviceName
-                        }
-
-                        if deviceModel != nil { break }
-                    }
-                }
-            }
+        guard components.count >= 2 else {
+            return "iOS \(folderName)"
         }
 
-        // Format: "iOS 15.0 (19A346) (iPhone 13 Pro Max)" or just "iOS 15.0 (19A346)"
-        if let deviceModel = deviceModel {
-            return "iOS \(folderName) (\(deviceModel))"
+        let deviceIdentifier = String(components[0])
+        let version = String(components[1])
+
+        // Extract build number if present (in parentheses)
+        var buildNumber: String?
+        if let buildStart = folderName.firstIndex(of: "("),
+           let buildEnd = folderName.firstIndex(of: ")") {
+            buildNumber = String(folderName[folderName.index(after: buildStart)..<buildEnd])
+        }
+
+        // Map device identifier to human-readable name
+        let deviceName = mapDeviceIdentifierToName(deviceIdentifier)
+
+        // Format: "iOS 26.0.1 (23A355) (iPhone 13 Pro Max)"
+        if let build = buildNumber {
+            return "iOS \(version) (\(build)) (\(deviceName))"
         } else {
-            return "iOS \(folderName)"
+            return "iOS \(version) (\(deviceName))"
         }
     }
 
