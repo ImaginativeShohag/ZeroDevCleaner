@@ -375,6 +375,73 @@ final class MainViewModel {
         }
     }
 
+    /// Scans all enabled locations from settings
+    func scanAllLocations(_ locations: [ScanLocation], locationManager: ScanLocationManager? = nil) {
+        // Prevent concurrent scans
+        guard !isScanning else {
+            Logger.scanning.warning("Attempted to start scan all while scan already in progress")
+            return
+        }
+
+        // Prevent scanning while deleting
+        guard !isDeleting else {
+            Logger.scanning.warning("Attempted to start scan all while deletion in progress")
+            return
+        }
+
+        guard !locations.isEmpty else {
+            Logger.scanning.notice("No enabled scan locations to scan")
+            return
+        }
+
+        Logger.scanning.info("Starting scan of \(locations.count) locations")
+
+        // Clear previous results
+        scanResults = []
+        isScanning = true
+        currentError = nil
+
+        Task {
+            var allResults: [BuildFolder] = []
+
+            for (index, location) in locations.enumerated() {
+                Logger.scanning.info("Scanning location \(index + 1)/\(locations.count): \(location.path.path, privacy: .public)")
+
+                do {
+                    currentScanPath = location.path.path
+                    let results = try await scanner.scanDirectory(at: location.path) { [weak self] path, _ in
+                        guard let self else { return }
+                        Task { @MainActor in
+                            self.currentScanPath = path
+                        }
+                    }
+
+                    allResults.append(contentsOf: results)
+                    Logger.scanning.info("Found \(results.count) build folders in \(location.name)")
+
+                    // Update last scanned time
+                    if let manager = locationManager {
+                        manager.updateLastScanned(for: location)
+                    }
+                } catch {
+                    Logger.scanning.error("Failed to scan location \(location.name): \(error.localizedDescription, privacy: .public)")
+                    // Continue with other locations
+                }
+            }
+
+            self.scanResults = allResults
+            self.isScanning = false
+
+            if allResults.isEmpty {
+                Logger.scanning.notice("No build folders found in any location")
+                self.currentError = .scanCancelled // Use generic error
+                self.showError = true
+            } else {
+                Logger.scanning.info("Scan all complete. Found \(allResults.count) total build folders")
+            }
+        }
+    }
+
     // MARK: - Selection Management
 
     /// Sorts results by the given column

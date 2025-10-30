@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MainView: View {
     @State private var viewModel = MainViewModel()
+    @State private var locationManager = ScanLocationManager()
+    @State private var showingSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -123,6 +125,32 @@ struct MainView: View {
                     .disabled(viewModel.isScanning || viewModel.isDeleting)
                 }
             }
+
+            // Scan All button
+            if !locationManager.enabledLocations.isEmpty {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        viewModel.scanAllLocations(locationManager.enabledLocations, locationManager: locationManager)
+                    } label: {
+                        Label("Scan All", systemImage: "folder.badge.gearshape")
+                    }
+                    .disabled(viewModel.isScanning || viewModel.isDeleting)
+                    .help("Scan all enabled locations from settings")
+                }
+            }
+
+            // Settings button
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
+                .disabled(viewModel.isScanning || viewModel.isDeleting)
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView(locationManager: locationManager)
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectFolder)) { _ in
             if !viewModel.isScanning && !viewModel.isDeleting {
