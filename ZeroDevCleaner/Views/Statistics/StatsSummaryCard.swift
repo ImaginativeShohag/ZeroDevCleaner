@@ -14,36 +14,46 @@ struct StatsSummaryCard: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(color)
-                .frame(width: 32)
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundStyle(color)
 
-            VStack(alignment: .leading, spacing: 2) {
+                    Spacer()
+                }
+
                 Text(value)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
 
                 Text(title)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(8)
     }
 }
 
 #Preview {
-    StatsSummaryCard(
-        title: "Total Cleaned",
-        value: "12.5 GB",
-        icon: "trash.fill",
-        color: .blue
-    )
+    HStack(spacing: 16) {
+        StatsSummaryCard(
+            title: "Total Cleaned",
+            value: "12.5 GB",
+            icon: "trash.fill",
+            color: .blue
+        )
+
+        StatsSummaryCard(
+            title: "Sessions",
+            value: "42",
+            icon: "clock.fill",
+            color: .green
+        )
+    }
     .padding()
-    .frame(width: 280)
 }
