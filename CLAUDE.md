@@ -272,14 +272,55 @@
 
 **Commit**: `76f24d5` - feat: add Xcode Documentation Cache support
 
+### Statistics Dashboard ✅ COMPLETE!
+**Goal**: Track cleaning history and display comprehensive statistics
+
+**Completed Features:**
+- ✅ **SwiftData Models** - Persistent data storage
+  - CleaningSession: Tracks timestamp, size, item count, duration
+  - CleanedItem: Individual items with type, size, path details
+  - CleaningStatistics: Aggregate stats computed from sessions
+  - @unchecked Sendable conformance for Swift 6 concurrency
+
+- ✅ **StatisticsService** - Actor-based service for data operations
+  - saveCleaningSession: Records deletion sessions automatically
+  - fetchAllSessions: Retrieves all cleaning history
+  - fetchRecentSessions: Gets limited recent sessions
+  - fetchStatistics: Computes aggregate metrics
+  - deleteSession/deleteAllSessions: Session management
+
+- ✅ **Automatic Tracking Integration**
+  - ModelContainer initialized in ZeroDevCleanerApp
+  - ModelContext injected into MainViewModel
+  - Deletion start time tracking
+  - Automatic statistics saving after successful deletion
+  - Captures build folders, static locations, and sub-items
+
+- ✅ **Statistics Dashboard UI** - Comprehensive visualization
+  - Summary cards: Total cleaned, session count, items deleted, avg per session
+  - Cleaning history chart using Swift Charts (bar chart with GB scale)
+  - Expandable session history list with item details
+  - Empty, loading, and error states
+  - Accessible via toolbar button (Cmd+Shift+S) and View menu
+
+**Technical Implementation:**
+- ✅ SwiftData @Model macros for data persistence
+- ✅ @ModelActor for thread-safe database operations
+- ✅ Swift Charts integration for data visualization
+- ✅ Automatic data collection on every deletion
+- ✅ Sheet-based presentation with model context
+
+**Commits**:
+- `7090cbf` - feat: add statistics tracking with SwiftData
+- `9705a4a` - feat: add Statistics Dashboard with charts and history
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
-1. **Settings/Preferences** (2-3h) - Scan options, exclusions
-2. **Statistics Dashboard** (3-4h) - Charts, total cleaned, history
-3. **Scheduled Scans** (4-5h) - Auto-scan on schedule
-4. **Export Results** (2h) - CSV export, reports
-5. **Save/Load Scans** (2-3h) - Compare over time
+1. **Settings/Preferences** (2-3h) - Advanced scan options, exclusions, preferences
+2. **Scheduled Scans** (4-5h) - Auto-scan on schedule, background scanning
+3. **Export Results** (2h) - CSV export, reports generation
+4. **Save/Load Scans** (2-3h) - Compare scans over time, track changes
 
 ---
 
@@ -317,8 +358,9 @@
 **Feature 6**: UI/UX Improvements & Bug Fixes ✅
 **Feature 7**: Advanced System Caches & Tabbed Interface ✅
 **Feature 8**: Xcode Documentation Cache Support ✅
+**Feature 9**: Statistics Dashboard with SwiftData & Swift Charts ✅
 
-**Total Commits**: 43
+**Total Commits**: 46
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7

@@ -22,6 +22,9 @@ ZeroDevCleaner helps developers quickly identify and remove build artifacts, cac
 
 ### System Cache Cleaning
 - **Xcode DerivedData** - `~/Library/Developer/Xcode/DerivedData`
+- **Xcode Archives** - `~/Library/Developer/Xcode/Archives`
+- **iOS Device Support** - `~/Library/Developer/Xcode/iOS DeviceSupport`
+- **Xcode Documentation Cache** - `~/Library/Developer/Xcode/DocumentationCache`
 - **Gradle Cache** - `~/.gradle/caches`
 - **CocoaPods Cache** - `~/Library/Caches/CocoaPods`
 - **npm Cache** - `~/.npm`
@@ -37,6 +40,7 @@ ZeroDevCleaner helps developers quickly identify and remove build artifacts, cac
 - 🚀 **Auto-Scan** - Automatically scans configured locations and system caches
 - ⌨️ **Keyboard Shortcuts** - Efficient workflow with keyboard support
 - 🔄 **Persistent Settings** - Remembers your scan locations
+- 📈 **Statistics Dashboard** - Track cleaning history with charts and insights
 
 ## 📸 Screenshots
 
@@ -99,6 +103,7 @@ Then build and run with Xcode (⌘R)
 |--------|----------|
 | Scan | `Cmd+R` |
 | Settings | `Cmd+,` |
+| Statistics | `Cmd+Shift+S` |
 | Select All | `Cmd+A` |
 | Deselect All | `Cmd+D` |
 | Delete Selected | `Cmd+Delete` |
@@ -243,9 +248,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [ ] Add more project type support (Flutter, Rust, Go, etc.)
-- [ ] Statistics dashboard showing cleaned space over time
+- [x] Statistics dashboard showing cleaned space over time
 - [ ] Scheduled automatic scans
+- [ ] Export scan results to CSV
+- [ ] Advanced filtering and search capabilities
 
 ---
 
