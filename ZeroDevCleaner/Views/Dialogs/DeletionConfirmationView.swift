@@ -114,6 +114,7 @@ struct DeletionConfirmationView: View {
                 .buttonStyle(.bordered)
                 .keyboardShortcut(.cancelAction)
                 .controlSize(.large)
+                .buttonHoverEffect()
 
                 Button("Move to Trash") {
                     onConfirm()
@@ -122,6 +123,7 @@ struct DeletionConfirmationView: View {
                 .tint(.red)
                 .keyboardShortcut(.defaultAction)
                 .controlSize(.large)
+                .buttonHoverEffect()
             }
         }
         .padding(32)

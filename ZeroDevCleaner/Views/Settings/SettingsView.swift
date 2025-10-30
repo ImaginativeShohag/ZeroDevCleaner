@@ -26,6 +26,7 @@ struct SettingsView: View {
                     showingFolderPicker = true
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonHoverEffect()
             }
             .padding()
 
@@ -65,6 +66,7 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .buttonHoverEffect()
             }
             .padding()
         }
@@ -146,6 +148,7 @@ struct LocationRow: View {
                     .font(.title3)
             }
             .buttonStyle(.plain)
+            .hoverEffect(scale: 1.1, brightness: 0.1)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(location.name)
@@ -170,9 +173,11 @@ struct LocationRow: View {
             }
             .buttonStyle(.plain)
             .help("Remove this location")
+            .hoverEffect(scale: 1.1, brightness: 0.1)
         }
         .padding(.vertical, 8)
         .contentShape(Rectangle())
+        .rowHoverEffect()
     }
 }
 

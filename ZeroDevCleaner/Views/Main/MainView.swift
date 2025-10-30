@@ -24,19 +24,24 @@ struct MainView: View {
                         showingSettings = true
                     }
                 )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
             } else if viewModel.isScanning {
                 ScanProgressView(
                     progress: viewModel.scanProgress,
                     currentPath: viewModel.currentScanPath,
                     onCancel: viewModel.cancelScan
                 )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
             } else {
                 ScanResultsView(
                     viewModel: viewModel,
                     onShowInFinder: viewModel.showInFinder
                 )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isScanning)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.scanResults.isEmpty)
         .frame(minWidth: 900, minHeight: 600)
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") { viewModel.dismissError() }

@@ -81,6 +81,7 @@ struct ScanResultsView: View {
                                             }
                                             .buttonStyle(.plain)
                                             .help("Show in Finder")
+                                            .hoverEffect(scale: 1.1, brightness: 0.1)
                                         }
                                     } else {
                                         Text("Not found")
@@ -93,6 +94,7 @@ struct ScanResultsView: View {
                                 .background(location.exists ? Color(nsColor: .controlBackgroundColor) : Color.clear)
                                 .cornerRadius(6)
                                 .opacity(location.exists ? 1.0 : 0.5)
+                                .rowHoverEffect()
                                 .contextMenu {
                                     if location.exists {
                                         Button("Show in Finder") {
@@ -179,9 +181,7 @@ struct ScanResultsView: View {
                     }
                 }
             }
-            .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(8)
+            .cardStyle()
             .padding(.horizontal)
             .padding(.vertical, 8)
 
@@ -190,9 +190,11 @@ struct ScanResultsView: View {
                 HStack(spacing: 12) {
                     Button("Select All", action: viewModel.selectAll)
                         .buttonStyle(.bordered)
+                        .buttonHoverEffect()
 
                     Button("Deselect All", action: viewModel.deselectAll)
                         .buttonStyle(.bordered)
+                        .buttonHoverEffect()
                 }
 
                 Spacer()
@@ -200,6 +202,7 @@ struct ScanResultsView: View {
                 Button("Remove Selected", action: viewModel.showDeleteConfirmation)
                     .buttonStyle(.borderedProminent)
                     .disabled(selectedCount == 0)
+                    .buttonHoverEffect()
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -321,6 +324,7 @@ struct ScanResultsView: View {
                 }
                 .buttonStyle(.plain)
                 .help(viewModel.sortOrder == .ascending ? "Ascending" : "Descending")
+                .hoverEffect(scale: 1.1, brightness: 0.1)
 
                 Spacer()
             }

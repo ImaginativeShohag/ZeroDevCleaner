@@ -19,6 +19,7 @@ struct EmptyStateView: View {
                 Image(systemName: "magnifyingglass.circle.fill")
                     .font(.system(size: 64))
                     .foregroundStyle(.blue)
+                    .iconPulse()
 
                 VStack(spacing: 8) {
                     Text("Ready to Scan")
@@ -41,11 +42,13 @@ struct EmptyStateView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .keyboardShortcut(.return, modifiers: .command)
+                .buttonHoverEffect()
             } else {
                 // No locations configured - prompt to add
                 Image(systemName: "folder.badge.gearshape")
                     .font(.system(size: 64))
                     .foregroundStyle(.secondary)
+                    .iconPulse()
 
                 VStack(spacing: 8) {
                     Text("No Scan Locations")
@@ -67,6 +70,7 @@ struct EmptyStateView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .buttonHoverEffect()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
