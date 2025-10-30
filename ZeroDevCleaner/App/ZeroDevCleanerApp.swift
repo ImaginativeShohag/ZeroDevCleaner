@@ -19,6 +19,14 @@ struct ZeroDevCleanerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
 
+            // Add Settings to app menu
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings...") {
+                    NotificationCenter.default.post(name: .openSettings, object: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandMenu("Scan") {
                 Button("Select Folder...") {
                     NotificationCenter.default.post(name: .selectFolder, object: nil)
@@ -60,4 +68,5 @@ extension Notification.Name {
     static let selectAll = Notification.Name("selectAll")
     static let deselectAll = Notification.Name("deselectAll")
     static let deleteSelected = Notification.Name("deleteSelected")
+    static let openSettings = Notification.Name("openSettings")
 }

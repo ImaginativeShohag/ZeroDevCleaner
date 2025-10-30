@@ -134,6 +134,9 @@ struct MainView: View {
                 viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in
+            showingSettings = true
+        }
         .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in
             if !viewModel.scanResults.isEmpty && !viewModel.isScanning && !viewModel.isDeleting {
                 viewModel.selectAll()

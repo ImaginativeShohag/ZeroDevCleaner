@@ -10,6 +10,8 @@ import SwiftUI
 
 enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     case derivedData = "DerivedData"
+    case xcodeArchives = "Xcode Archives"
+    case deviceSupport = "Device Support"
     case gradleCache = "Gradle Cache"
     case cocoapodsCache = "CocoaPods Cache"
     case npmCache = "npm Cache"
@@ -22,6 +24,10 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
         switch self {
         case .derivedData:
             return "Xcode build artifacts and indexes"
+        case .xcodeArchives:
+            return "Xcode app archives from builds"
+        case .deviceSupport:
+            return "iOS device support files"
         case .gradleCache:
             return "Gradle dependencies and build cache"
         case .cocoapodsCache:
@@ -39,6 +45,10 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
         switch self {
         case .derivedData:
             return "hammer.fill"
+        case .xcodeArchives:
+            return "archivebox.fill"
+        case .deviceSupport:
+            return "iphone.gen3"
         case .gradleCache:
             return "cube.fill"
         case .cocoapodsCache:
@@ -56,6 +66,10 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
         switch self {
         case .derivedData:
             return .blue
+        case .xcodeArchives:
+            return .indigo
+        case .deviceSupport:
+            return .pink
         case .gradleCache:
             return .green
         case .cocoapodsCache:
@@ -74,6 +88,10 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
         switch self {
         case .derivedData:
             return home.appendingPathComponent("Library/Developer/Xcode/DerivedData")
+        case .xcodeArchives:
+            return home.appendingPathComponent("Library/Developer/Xcode/Archives")
+        case .deviceSupport:
+            return home.appendingPathComponent("Library/Developer/Xcode/iOS DeviceSupport")
         case .gradleCache:
             return home.appendingPathComponent(".gradle/caches")
         case .cocoapodsCache:

@@ -308,10 +308,20 @@ final class MainViewModel {
 
                     do {
                         currentScanPath = location.path.path
-                        let results = try await scanner.scanDirectory(at: location.path) { [weak self] path, _ in
+
+                        // Update progress based on location being scanned
+                        // Reserve 80% for locations, 20% for static caches
+                        let locationProgress = Double(index) / Double(locations.count) * 0.8
+                        scanProgress = locationProgress
+
+                        let results = try await scanner.scanDirectory(at: location.path) { [weak self] path, count in
                             guard let self else { return }
                             Task { @MainActor in
                                 self.currentScanPath = path
+                                // Update progress within this location
+                                let baseProgress = Double(index) / Double(locations.count) * 0.8
+                                let incrementProgress = (1.0 / Double(locations.count)) * 0.8 * min(Double(count) / 100.0, 1.0)
+                                self.scanProgress = baseProgress + incrementProgress
                             }
                         }
 
@@ -327,16 +337,22 @@ final class MainViewModel {
                         // Continue with other locations
                     }
                 }
+
+                // Mark locations as 80% done
+                scanProgress = 0.8
             }
 
             // Scan static locations (system caches)
             do {
                 Logger.scanning.info("Scanning system caches")
                 let types = StaticLocationType.allCases
-                let staticResults = try await staticScanner.scanStaticLocations(types: types) { [weak self] path, _ in
+                let staticResults = try await staticScanner.scanStaticLocations(types: types) { [weak self] path, current in
                     guard let self else { return }
                     Task { @MainActor in
                         self.currentScanPath = path
+                        // Update progress: 80% done from locations, now doing remaining 20%
+                        let staticProgress = 0.8 + (Double(current) / Double(types.count) * 0.2)
+                        self.scanProgress = staticProgress
                     }
                 }
 
@@ -347,6 +363,9 @@ final class MainViewModel {
                 Logger.scanning.error("Static scan failed: \(error.localizedDescription, privacy: .public)")
                 // Continue even if static scan fails
             }
+
+            // Mark scan as complete (100%)
+            self.scanProgress = 1.0
 
             // Update results
             self.scanResults = allBuildFolders
