@@ -14,14 +14,15 @@ struct MainView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.scanResults.isEmpty && !viewModel.isScanning {
+            if viewModel.scanResults.isEmpty && viewModel.staticLocations.isEmpty && !viewModel.isScanning {
                 EmptyStateView(
-                    selectedFolder: viewModel.selectedFolder,
-                    onSelectFolder: viewModel.selectFolder,
-                    onFolderDropped: { url in
-                        viewModel.selectFolder(at: url)
+                    hasConfiguredLocations: !locationManager.enabledLocations.isEmpty,
+                    onStartScan: {
+                        viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
                     },
-                    onStartScan: viewModel.startScan
+                    onOpenSettings: {
+                        showingSettings = true
+                    }
                 )
             } else if viewModel.isScanning {
                 ScanProgressView(
@@ -87,56 +88,15 @@ struct MainView: View {
             .interactiveDismissDisabled()
         }
         .toolbar {
+            // Scan button - always visible
             ToolbarItem(placement: .automatic) {
-                Button("Select Folder") {
-                    viewModel.selectFolder()
+                Button {
+                    viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
+                } label: {
+                    Label("Scan", systemImage: "play.fill")
                 }
                 .disabled(viewModel.isScanning || viewModel.isDeleting)
-            }
-
-            if viewModel.selectedFolder != nil {
-                ToolbarItem(placement: .automatic) {
-                    Button("Scan") {
-                        viewModel.startScan()
-                    }
-                    .disabled(viewModel.isScanning || viewModel.isDeleting)
-                }
-            }
-
-            // Recent folders menu
-            if !viewModel.recentFoldersManager.recentFolders.isEmpty {
-                ToolbarItem(placement: .automatic) {
-                    Menu {
-                        ForEach(viewModel.recentFoldersManager.recentFolders, id: \.self) { url in
-                            Button(url.lastPathComponent) {
-                                viewModel.selectFolder(at: url)
-                            }
-                            .disabled(viewModel.isScanning || viewModel.isDeleting)
-                        }
-
-                        Divider()
-
-                        Button("Clear Recent Folders") {
-                            viewModel.recentFoldersManager.clearAll()
-                        }
-                    } label: {
-                        Label("Recent", systemImage: "clock.arrow.circlepath")
-                    }
-                    .disabled(viewModel.isScanning || viewModel.isDeleting)
-                }
-            }
-
-            // Scan All button
-            if !locationManager.enabledLocations.isEmpty {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        viewModel.scanAllLocations(locationManager.enabledLocations, locationManager: locationManager)
-                    } label: {
-                        Label("Scan All", systemImage: "folder.badge.gearshape")
-                    }
-                    .disabled(viewModel.isScanning || viewModel.isDeleting)
-                    .help("Scan all enabled locations from settings")
-                }
+                .keyboardShortcut("r", modifiers: .command)
             }
 
             // Settings button
@@ -147,19 +107,25 @@ struct MainView: View {
                     Label("Settings", systemImage: "gear")
                 }
                 .disabled(viewModel.isScanning || viewModel.isDeleting)
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
+            // Exit button
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    NSApplication.shared.terminate(nil)
+                } label: {
+                    Label("Exit", systemImage: "xmark.circle")
+                }
+                .keyboardShortcut("q", modifiers: .command)
             }
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(locationManager: locationManager)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .selectFolder)) { _ in
-            if !viewModel.isScanning && !viewModel.isDeleting {
-                viewModel.selectFolder()
-            }
-        }
         .onReceive(NotificationCenter.default.publisher(for: .startScan)) { _ in
-            if viewModel.selectedFolder != nil && !viewModel.isScanning && !viewModel.isDeleting {
-                viewModel.startScan()
+            if !viewModel.isScanning && !viewModel.isDeleting {
+                viewModel.startScan(locations: locationManager.enabledLocations, locationManager: locationManager)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .selectAll)) { _ in

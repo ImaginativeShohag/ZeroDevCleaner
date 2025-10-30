@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Bindable var locationManager: ScanLocationManager
     @State private var showingFolderPicker = false
+    @State private var isDropTargeted = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -32,11 +33,13 @@ struct SettingsView: View {
 
             // Locations List
             if locationManager.locations.isEmpty {
-                ContentUnavailableView(
-                    "No Scan Locations",
-                    systemImage: "folder.badge.plus",
-                    description: Text("Add folders to scan automatically")
-                )
+                ContentUnavailableView {
+                    Label("No Scan Locations", systemImage: "folder.badge.plus")
+                } description: {
+                    Text("Add folders to scan automatically\n\nDrag & drop folders here or click Add Location")
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxHeight: .infinity)
             } else {
                 List {
                     ForEach(locationManager.locations) { location in
@@ -53,6 +56,9 @@ struct SettingsView: View {
 
             // Footer with close button
             HStack {
+                Text("Drag & drop folders to add")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Done") {
                     dismiss()
@@ -63,11 +69,58 @@ struct SettingsView: View {
             .padding()
         }
         .frame(width: 600, height: 400)
+        .background(
+            RoundedRectangle(cornerRadius: 0)
+                .fill(isDropTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 0)
+                .strokeBorder(
+                    isDropTargeted ? Color.accentColor : Color.clear,
+                    style: StrokeStyle(lineWidth: 3, dash: [8, 4])
+                )
+                .padding(2)
+        )
+        .dropDestination(for: URL.self) { items, location in
+            // Handle multiple folder drops
+            var addedCount = 0
+            for url in items {
+                // Verify it's a directory
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+                      isDirectory.boolValue else {
+                    continue
+                }
+
+                // Check if already exists
+                if locationManager.locations.contains(where: { $0.path == url }) {
+                    continue
+                }
+
+                let scanLocation = ScanLocation(
+                    name: url.lastPathComponent,
+                    path: url
+                )
+                locationManager.addLocation(scanLocation)
+                addedCount += 1
+            }
+
+            return addedCount > 0
+        } isTargeted: { isTargeted in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isDropTargeted = isTargeted
+            }
+        }
         .fileImporter(
             isPresented: $showingFolderPicker,
             allowedContentTypes: [.folder]
         ) { result in
             if case .success(let url) = result {
+                // Check if already exists
+                guard !locationManager.locations.contains(where: { $0.path == url }) else {
+                    return
+                }
+
                 let location = ScanLocation(
                     name: url.lastPathComponent,
                     path: url

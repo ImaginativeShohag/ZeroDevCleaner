@@ -14,7 +14,7 @@ struct ScanResultsView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Static Locations Section
-            if !viewModel.staticLocations.isEmpty || viewModel.isScanningStatic {
+            if !viewModel.staticLocations.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "externaldrive.fill")
@@ -29,12 +29,6 @@ struct ScanResultsView: View {
                                 .controlSize(.small)
                                 .padding(.trailing, 4)
                         }
-
-                        Button(viewModel.isScanningStatic ? "Scanning..." : "Refresh") {
-                            viewModel.scanStaticLocations()
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(viewModel.isScanningStatic)
                     }
 
                     // Static locations mini table
@@ -75,6 +69,18 @@ struct ScanResultsView: View {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .foregroundStyle(.green)
                                                 .font(.caption)
+
+                                            Button {
+                                                NSWorkspace.shared.selectFile(
+                                                    location.path.path,
+                                                    inFileViewerRootedAtPath: location.path.deletingLastPathComponent().path
+                                                )
+                                            } label: {
+                                                Image(systemName: "arrow.up.forward.app")
+                                                    .foregroundStyle(.blue)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .help("Show in Finder")
                                         }
                                     } else {
                                         Text("Not found")
@@ -87,6 +93,21 @@ struct ScanResultsView: View {
                                 .background(location.exists ? Color(nsColor: .controlBackgroundColor) : Color.clear)
                                 .cornerRadius(6)
                                 .opacity(location.exists ? 1.0 : 0.5)
+                                .contextMenu {
+                                    if location.exists {
+                                        Button("Show in Finder") {
+                                            NSWorkspace.shared.selectFile(
+                                                location.path.path,
+                                                inFileViewerRootedAtPath: location.path.deletingLastPathComponent().path
+                                            )
+                                        }
+
+                                        Button("Copy Path") {
+                                            NSPasteboard.general.clearContents()
+                                            NSPasteboard.general.setString(location.path.path, forType: .string)
+                                        }
+                                    }
+                                }
                             }
                         }
                         .padding(.top, 4)
@@ -100,27 +121,6 @@ struct ScanResultsView: View {
 
                 Divider()
                     .padding(.vertical, 8)
-            } else {
-                // Show button to scan static locations if not yet scanned
-                HStack {
-                    Image(systemName: "externaldrive.fill")
-                        .foregroundStyle(.purple)
-                    Text("Want to check system caches?")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Button("Scan System Caches") {
-                        viewModel.scanStaticLocations()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color(nsColor: .controlBackgroundColor).opacity(0.3))
-                .cornerRadius(8)
-                .padding(.horizontal)
-                .padding(.top, 8)
             }
 
             // Enhanced Summary Card

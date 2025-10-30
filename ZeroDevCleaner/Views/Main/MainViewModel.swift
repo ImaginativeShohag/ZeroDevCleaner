@@ -48,9 +48,6 @@ final class MainViewModel {
 
     // MARK: - State Properties
 
-    /// Currently selected folder to scan
-    var selectedFolder: URL?
-
     /// Results from the last scan
     var scanResults: [BuildFolder] = []
 
@@ -156,7 +153,6 @@ final class MainViewModel {
     private let scanner: FileScannerProtocol
     private let deleter: FileDeleterProtocol
     private let staticScanner: StaticLocationScannerProtocol
-    let recentFoldersManager = RecentFoldersManager()
 
     // MARK: - Private Properties
 
@@ -188,53 +184,10 @@ final class MainViewModel {
         self.init(scanner: scanner, deleter: deleter, staticScanner: staticScanner)
     }
 
-    // MARK: - Folder Selection
-
-    /// Opens folder selection dialog
-    func selectFolder() {
-        let panel = NSOpenPanel()
-        panel.title = "Select Folder to Scan"
-        panel.message = "Choose a directory to scan for build folders"
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = false
-        panel.allowsMultipleSelection = false
-
-        if panel.runModal() == .OK {
-            selectedFolder = panel.url
-        }
-    }
-
-    /// Selects a folder at the given URL
-    func selectFolder(at url: URL) {
-        // Verify it's a directory
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-              isDirectory.boolValue else {
-            handleError(ZeroDevCleanerError.fileNotFound(url))
-            return
-        }
-
-        // Check if it's a network drive
-        do {
-            let values = try url.resourceValues(forKeys: [.volumeIsLocalKey])
-            if let isLocal = values.volumeIsLocal, !isLocal {
-                handleError(ZeroDevCleanerError.networkDriveNotSupported(url))
-                return
-            }
-        } catch {
-            // If we can't determine, allow the selection
-        }
-
-        selectedFolder = url
-    }
-
     // MARK: - Scanning
 
-    /// Starts scanning the selected folder
-    func startScan() {
-        guard let folder = selectedFolder else { return }
-
+    /// Starts scanning configured locations and system caches
+    func startScan(locations: [ScanLocation], locationManager: ScanLocationManager? = nil) {
         // Prevent concurrent scans
         guard !isScanning else {
             Logger.scanning.warning("Attempted to start scan while scan already in progress")
@@ -247,67 +200,82 @@ final class MainViewModel {
             return
         }
 
-        Logger.scanning.info("Starting scan at: \(folder.path)")
+        Logger.scanning.info("Starting comprehensive scan - \(locations.count) locations + system caches")
 
         // Cancel any existing scan
         cancelScan()
 
         // Reset state
         scanResults = []
+        staticLocations = []
         scanProgress = 0.0
         currentScanPath = ""
         isScanning = true
+        isScanningStatic = true
 
         // Start scan task
         scanTask = Task {
+            var allBuildFolders: [BuildFolder] = []
+
+            // Scan configured locations
+            if !locations.isEmpty {
+                for (index, location) in locations.enumerated() {
+                    Logger.scanning.info("Scanning location \(index + 1)/\(locations.count): \(location.path.path, privacy: .public)")
+
+                    do {
+                        currentScanPath = location.path.path
+                        let results = try await scanner.scanDirectory(at: location.path) { [weak self] path, _ in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.currentScanPath = path
+                            }
+                        }
+
+                        allBuildFolders.append(contentsOf: results)
+                        Logger.scanning.info("Found \(results.count) build folders in \(location.name)")
+
+                        // Update last scanned time
+                        if let manager = locationManager {
+                            manager.updateLastScanned(for: location)
+                        }
+                    } catch {
+                        Logger.scanning.error("Failed to scan location \(location.name): \(error.localizedDescription, privacy: .public)")
+                        // Continue with other locations
+                    }
+                }
+            }
+
+            // Scan static locations (system caches)
             do {
-                let results = try await scanner.scanDirectory(at: folder) { [weak self] path, count in
+                Logger.scanning.info("Scanning system caches")
+                let types = StaticLocationType.allCases
+                let staticResults = try await staticScanner.scanStaticLocations(types: types) { [weak self] path, _ in
                     guard let self else { return }
                     Task { @MainActor in
                         self.currentScanPath = path
-                        self.scanProgress = Double(count) / 100.0 // Approximate progress
                     }
                 }
 
-                // Update results on main actor
-                self.scanResults = results
-                self.isScanning = false
-
-                Logger.scanning.info("Scan completed. Found \(results.count) build folders")
-
-                // Check for empty results
-                if results.isEmpty {
-                    Logger.scanning.notice("No build folders found at: \(folder.path)")
-                    self.currentError = .noResultsFound(folder)
-                    self.showError = true
-                } else {
-                    // Add to recent folders on successful scan with results
-                    self.recentFoldersManager.addFolder(folder)
-                }
-            } catch let error as NSError {
-                Logger.scanning.error("Scan failed with NSError: \(error.localizedDescription, privacy: .public)")
-
-                // Check if this is a permission error
-                // NSFileReadNoPermissionError = 257
-                // NSFileReadNoSuchFileError = 260 (sometimes returned for permission issues)
-                if error.domain == NSCocoaErrorDomain &&
-                   (error.code == 257 || error.code == 260 || error.code == 513) {
-                    // This is a permission issue
-                    self.currentError = .permissionDenied(folder)
-                    self.showPermissionError = true
-                } else if error.localizedDescription.lowercased().contains("permission") ||
-                          error.localizedDescription.lowercased().contains("not permitted") {
-                    // Catch any other permission-related errors by description
-                    self.currentError = .permissionDenied(folder)
-                    self.showPermissionError = true
-                } else {
-                    self.handleError(error)
-                }
-                self.isScanning = false
+                self.staticLocations = staticResults
+                let existingCount = staticResults.filter(\.exists).count
+                Logger.scanning.info("Found \(existingCount) of \(types.count) system cache locations")
             } catch {
-                Logger.scanning.error("Scan failed: \(error.localizedDescription, privacy: .public)")
-                self.handleError(error)
-                self.isScanning = false
+                Logger.scanning.error("Static scan failed: \(error.localizedDescription, privacy: .public)")
+                // Continue even if static scan fails
+            }
+
+            // Update results
+            self.scanResults = allBuildFolders
+            self.isScanning = false
+            self.isScanningStatic = false
+
+            let totalFound = allBuildFolders.count + self.staticLocations.filter(\.exists).count
+            Logger.scanning.info("Scan complete. Found \(allBuildFolders.count) build folders and \(self.staticLocations.filter(\.exists).count) system caches")
+
+            if totalFound == 0 {
+                Logger.scanning.notice("No items found in any location")
+                self.currentError = .scanCancelled
+                self.showError = true
             }
         }
     }
@@ -334,111 +302,10 @@ final class MainViewModel {
         }
     }
 
-    /// Scans static locations (DerivedData, caches, etc.)
-    func scanStaticLocations() {
-        guard !isScanningStatic else {
-            Logger.scanning.warning("Static scan already in progress")
-            return
-        }
-
-        Logger.scanning.info("Starting static location scan")
-
-        isScanningStatic = true
-
-        Task {
-            do {
-                let types = StaticLocationType.allCases
-                let results = try await staticScanner.scanStaticLocations(types: types) { [weak self] path, count in
-                    guard let self else { return }
-                    Task { @MainActor in
-                        self.currentScanPath = path
-                    }
-                }
-
-                self.staticLocations = results
-                self.isScanningStatic = false
-
-                let existingCount = results.filter(\.exists).count
-                Logger.scanning.info("Static scan complete. Found \(existingCount) of \(types.count) locations")
-            } catch {
-                Logger.scanning.error("Static scan failed: \(error.localizedDescription, privacy: .public)")
-                self.handleError(error)
-                self.isScanningStatic = false
-            }
-        }
-    }
-
     /// Toggles selection for a specific static location
     func toggleStaticLocationSelection(for location: StaticLocation) {
         if let index = staticLocations.firstIndex(where: { $0.id == location.id }) {
             staticLocations[index].isSelected.toggle()
-        }
-    }
-
-    /// Scans all enabled locations from settings
-    func scanAllLocations(_ locations: [ScanLocation], locationManager: ScanLocationManager? = nil) {
-        // Prevent concurrent scans
-        guard !isScanning else {
-            Logger.scanning.warning("Attempted to start scan all while scan already in progress")
-            return
-        }
-
-        // Prevent scanning while deleting
-        guard !isDeleting else {
-            Logger.scanning.warning("Attempted to start scan all while deletion in progress")
-            return
-        }
-
-        guard !locations.isEmpty else {
-            Logger.scanning.notice("No enabled scan locations to scan")
-            return
-        }
-
-        Logger.scanning.info("Starting scan of \(locations.count) locations")
-
-        // Clear previous results
-        scanResults = []
-        isScanning = true
-        currentError = nil
-
-        Task {
-            var allResults: [BuildFolder] = []
-
-            for (index, location) in locations.enumerated() {
-                Logger.scanning.info("Scanning location \(index + 1)/\(locations.count): \(location.path.path, privacy: .public)")
-
-                do {
-                    currentScanPath = location.path.path
-                    let results = try await scanner.scanDirectory(at: location.path) { [weak self] path, _ in
-                        guard let self else { return }
-                        Task { @MainActor in
-                            self.currentScanPath = path
-                        }
-                    }
-
-                    allResults.append(contentsOf: results)
-                    Logger.scanning.info("Found \(results.count) build folders in \(location.name)")
-
-                    // Update last scanned time
-                    if let manager = locationManager {
-                        manager.updateLastScanned(for: location)
-                    }
-                } catch {
-                    Logger.scanning.error("Failed to scan location \(location.name): \(error.localizedDescription, privacy: .public)")
-                    // Continue with other locations
-                }
-            }
-
-            self.scanResults = allResults
-            self.isScanning = false
-
-            if allResults.isEmpty {
-                Logger.scanning.notice("No build folders found in any location")
-                self.currentError = .scanCancelled // Use generic error
-                self.showError = true
-            } else {
-                Logger.scanning.info("Scan all complete. Found \(allResults.count) total build folders")
-            }
         }
     }
 

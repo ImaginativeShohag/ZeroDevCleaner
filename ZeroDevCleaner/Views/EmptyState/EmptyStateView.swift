@@ -6,77 +6,63 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct EmptyStateView: View {
-    let selectedFolder: URL?
-    let onSelectFolder: () -> Void
-    let onFolderDropped: (URL) -> Void
+    let hasConfiguredLocations: Bool
     let onStartScan: () -> Void
-
-    @State private var isDropTargeted = false
+    let onOpenSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 24) {
-            if let folder = selectedFolder {
-                // Folder selected - ready to scan
-                Image(systemName: "checkmark.circle.fill")
+            if hasConfiguredLocations {
+                // Has configured locations - ready to scan
+                Image(systemName: "magnifyingglass.circle.fill")
                     .font(.system(size: 64))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.blue)
 
                 VStack(spacing: 8) {
-                    Text("Folder Selected")
+                    Text("Ready to Scan")
                         .font(.title)
                         .fontWeight(.semibold)
 
-                    Text(folder.lastPathComponent)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-
-                    Text(folder.path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-
-                HStack(spacing: 12) {
-                    Button(action: onSelectFolder) {
-                        Label("Change Folder", systemImage: "folder")
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(action: onStartScan) {
-                        Label("Start Scan", systemImage: "play.fill")
-                            .font(.headline)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                }
-            } else {
-                // No folder selected - initial state
-                Image(systemName: "folder.badge.questionmark")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.secondary)
-
-                VStack(spacing: 8) {
-                    Text("No Folder Selected")
-                        .font(.title)
-                        .fontWeight(.semibold)
-
-                    Text("Select a folder to scan for build artifacts")
+                    Text("Click Scan to find cache files")
                         .font(.body)
                         .foregroundStyle(.secondary)
 
-                    Text("or drag & drop a folder here")
+                    Text("System caches and configured locations will be scanned")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
 
-                Button(action: onSelectFolder) {
-                    Label("Select Folder", systemImage: "folder")
+                Button(action: onStartScan) {
+                    Label("Scan", systemImage: "play.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .keyboardShortcut(.return, modifiers: .command)
+            } else {
+                // No locations configured - prompt to add
+                Image(systemName: "folder.badge.gearshape")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 8) {
+                    Text("No Scan Locations")
+                        .font(.title)
+                        .fontWeight(.semibold)
+
+                    Text("Add your projects path in settings")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Text("System caches will be scanned automatically")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Button(action: onOpenSettings) {
+                    Label("Open Settings", systemImage: "gear")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
@@ -84,43 +70,21 @@ struct EmptyStateView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isDropTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    isDropTargeted ? Color.accentColor : Color.clear,
-                    style: StrokeStyle(lineWidth: 2, dash: [8, 4])
-                )
-                .padding(20)
-        )
-        .dropDestination(for: URL.self) { items, location in
-            guard let url = items.first else { return false }
-
-            // Verify it's a directory
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-                  isDirectory.boolValue else {
-                return false
-            }
-
-            onFolderDropped(url)
-            return true
-        } isTargeted: { isTargeted in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isDropTargeted = isTargeted
-            }
-        }
     }
 }
 
-#Preview {
+#Preview("No Locations") {
     EmptyStateView(
-        selectedFolder: nil,
-        onSelectFolder: {},
-        onFolderDropped: { _ in },
-        onStartScan: {}
+        hasConfiguredLocations: false,
+        onStartScan: {},
+        onOpenSettings: {}
+    )
+}
+
+#Preview("Has Locations") {
+    EmptyStateView(
+        hasConfiguredLocations: true,
+        onStartScan: {},
+        onOpenSettings: {}
     )
 }
