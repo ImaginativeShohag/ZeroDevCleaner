@@ -5,7 +5,7 @@
 ![macOS](https://img.shields.io/badge/macOS-15.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Build](https://github.com/yourusername/ZeroDevCleaner/workflows/Build%20Check/badge.svg)
+![Build](https://github.com/ImaginativeShohag/ZeroDevCleaner/workflows/Build%20Check/badge.svg)
 
 ZeroDevCleaner helps developers quickly identify and remove build artifacts, caches, and temporary files that accumulate during software development. With support for multiple project types and system caches, you can reclaim gigabytes of disk space in seconds.
 
@@ -46,7 +46,7 @@ _Coming soon_
 ## 🚀 Installation
 
 ### Download Pre-built Release
-1. Download the latest release from [Releases](https://github.com/yourusername/ZeroDevCleaner/releases)
+1. Download the latest release from [Releases](https://github.com/ImaginativeShohag/ZeroDevCleaner/releases)
 2. Open the `.dmg` file
 3. Drag **ZeroDevCleaner** to your Applications folder
 4. Launch from Applications
@@ -55,7 +55,7 @@ _Coming soon_
 
 ### Build from Source
 ```bash
-git clone https://github.com/yourusername/ZeroDevCleaner.git
+git clone https://github.com/ImaginativeShohag/ZeroDevCleaner.git
 cd ZeroDevCleaner
 open ZeroDevCleaner.xcodeproj
 ```
@@ -177,7 +177,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ZeroDevCleaner.git
+   git clone https://github.com/ImaginativeShohag/ZeroDevCleaner.git
    cd ZeroDevCleaner
    ```
 
@@ -238,8 +238,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/ZeroDevCleaner/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/ZeroDevCleaner/discussions)
+- **Issues**: [GitHub Issues](https://github.com/ImaginativeShohag/ZeroDevCleaner/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ImaginativeShohag/ZeroDevCleaner/discussions)
 
 ## 🗺️ Roadmap
 
