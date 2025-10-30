@@ -357,6 +357,45 @@
 
 **Commit**: `2b2782d` - refactor: move statistics to home screen sidebar and add Done button
 
+### Improved Home Screen Layout ✅ COMPLETE!
+**Goal**: Rearrange home screen with vertical layout for better UX and information hierarchy
+
+**Completed Features:**
+- ✅ **Vertical Layout with Clear Hierarchy** - Top-to-bottom information flow
+  - Statistics cards grid at the very top (4 cards in horizontal row)
+  - Cleaning history chart in the middle section
+  - Scan action buttons at the bottom
+  - Wrapped in ScrollView for smaller windows
+
+- ✅ **Redesigned Statistics Cards** - Better grid layout design
+  - Changed from horizontal to vertical card layout
+  - Uses GroupBox for native macOS appearance
+  - Icon at top, large value text, subtitle at bottom
+  - Equal width cards in horizontal grid
+  - More readable and visually balanced
+
+- ✅ **Integrated Cleaning History Chart** - Visual data representation
+  - Bar chart showing cleaning sessions over time
+  - GB scale on Y-axis with formatted labels
+  - Date-based X-axis with day granularity
+  - 200pt height optimized for home screen
+  - Blue gradient bars matching app theme
+
+- ✅ **Smart Content Display** - Adaptive based on data availability
+  - Statistics and chart only shown when data exists
+  - Scan actions always visible at bottom
+  - More vertical padding when no statistics (centered appearance)
+  - Less padding when statistics present (compact layout)
+
+**Technical Implementation:**
+- ✅ Swift Charts framework integration in EmptyStateView
+- ✅ ScrollView container for responsive layout
+- ✅ GroupBox for native macOS card styling
+- ✅ Conditional rendering based on allSessions.isEmpty
+- ✅ Optimized vertical spacing and padding
+
+**Commit**: `e40374d` - refactor: improve home screen layout with vertical statistics design
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -403,8 +442,9 @@
 **Feature 8**: Xcode Documentation Cache Support ✅
 **Feature 9**: Statistics Dashboard with SwiftData & Swift Charts ✅
 **Feature 10**: Statistics on Home Screen & Done Button ✅
+**Feature 11**: Improved Home Screen Layout with Vertical Statistics ✅
 
-**Total Commits**: 47
+**Total Commits**: 48
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
