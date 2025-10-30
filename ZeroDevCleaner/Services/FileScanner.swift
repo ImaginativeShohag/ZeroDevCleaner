@@ -80,14 +80,22 @@ final class FileScanner: FileScannerProtocol {
 
             let folderName = itemURL.lastPathComponent
 
-            // Skip system/version control hidden folders (but allow .build)
-            if folderName.hasPrefix(".") && folderName != ".build" {
+            // Skip system/version control hidden folders (but allow .build and .venv/.env)
+            if folderName.hasPrefix(".") && folderName != ".build" && folderName != ".venv" && folderName != ".env" {
                 // Skip .git, .svn, .DS_Store, etc.
                 continue
             }
 
-            // Check if this is a build folder
-            if folderName == "build" || folderName == ".build" {
+            // Check if this is a build/cache folder
+            if folderName == "build" ||
+               folderName == ".build" ||
+               folderName == "node_modules" ||
+               folderName == "target" ||
+               folderName == "__pycache__" ||
+               folderName == "venv" ||
+               folderName == ".venv" ||
+               folderName == "env" ||
+               folderName == ".env" {
                 if let projectType = validator.detectProjectType(buildFolder: itemURL) {
                     group.addTask {
                         await self.createBuildFolder(url: itemURL, projectType: projectType)

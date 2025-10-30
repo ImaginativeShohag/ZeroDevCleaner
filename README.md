@@ -14,7 +14,10 @@ ZeroDevCleaner helps developers quickly identify and remove build artifacts, cac
 - **Android Projects** - `build/` folders from Gradle builds
 - **iOS/Xcode Projects** - Build folders and intermediate files
 - **Swift Packages** - `.build/` directories
-- **Generic Build Folders** - Common build artifact patterns
+- **Flutter Projects** - `build/` folders from Flutter builds
+- **Node.js Projects** - `node_modules/` dependency folders
+- **Rust Projects** - `target/` build directories
+- **Python Projects** - `__pycache__/`, `venv/`, `.venv/`, `env/` folders
 
 ### System Cache Cleaning
 - **Xcode DerivedData** - `~/Library/Developer/Xcode/DerivedData`

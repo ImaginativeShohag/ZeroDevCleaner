@@ -13,6 +13,10 @@ enum ProjectType: String, Codable, CaseIterable, Sendable {
     case android
     case iOS
     case swiftPackage
+    case flutter
+    case nodeJS
+    case rust
+    case python
 
     /// Human-readable display name
     var displayName: String {
@@ -23,6 +27,14 @@ enum ProjectType: String, Codable, CaseIterable, Sendable {
             return "iOS/Xcode"
         case .swiftPackage:
             return "Swift Package"
+        case .flutter:
+            return "Flutter"
+        case .nodeJS:
+            return "Node.js"
+        case .rust:
+            return "Rust"
+        case .python:
+            return "Python"
         }
     }
 
@@ -35,6 +47,14 @@ enum ProjectType: String, Codable, CaseIterable, Sendable {
             return "apple.logo"
         case .swiftPackage:
             return "shippingbox.fill"
+        case .flutter:
+            return "wind"
+        case .nodeJS:
+            return "atom"
+        case .rust:
+            return "gearshape.2.fill"
+        case .python:
+            return "chevron.left.forwardslash.chevron.right"
         }
     }
 
@@ -47,16 +67,30 @@ enum ProjectType: String, Codable, CaseIterable, Sendable {
             return .blue
         case .swiftPackage:
             return .orange
+        case .flutter:
+            return .cyan
+        case .nodeJS:
+            return .green
+        case .rust:
+            return .orange
+        case .python:
+            return .yellow
         }
     }
 
     /// Folder name pattern to search for
     var buildFolderName: String {
         switch self {
-        case .android:
+        case .android, .flutter:
             return "build"
         case .iOS, .swiftPackage:
             return ".build"
+        case .nodeJS:
+            return "node_modules"
+        case .rust:
+            return "target"
+        case .python:
+            return "__pycache__"
         }
     }
 }

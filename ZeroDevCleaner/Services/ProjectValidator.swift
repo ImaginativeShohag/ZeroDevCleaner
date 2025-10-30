@@ -85,11 +85,84 @@ final class ProjectValidator: ProjectValidatorProtocol, Sendable {
         return findFileInParentDirectories(from: buildFolder, named: "Package.swift", maxLevels: 2)
     }
 
+    func isValidFlutterProject(buildFolder: URL) -> Bool {
+        // Check if folder is named "build"
+        guard buildFolder.lastPathComponent == "build" else {
+            return false
+        }
+
+        // Look for pubspec.yaml in parent directory
+        return findFileInParentDirectories(from: buildFolder, named: "pubspec.yaml", maxLevels: 2)
+    }
+
+    func isValidNodeJSProject(buildFolder: URL) -> Bool {
+        // Check if folder is named "node_modules"
+        guard buildFolder.lastPathComponent == "node_modules" else {
+            return false
+        }
+
+        // Look for package.json in parent directory
+        let parentURL = buildFolder.deletingLastPathComponent()
+        return directoryContainsFile(directory: parentURL, named: "package.json")
+    }
+
+    func isValidRustProject(buildFolder: URL) -> Bool {
+        // Check if folder is named "target"
+        guard buildFolder.lastPathComponent == "target" else {
+            return false
+        }
+
+        // Look for Cargo.toml in parent directory
+        let parentURL = buildFolder.deletingLastPathComponent()
+        return directoryContainsFile(directory: parentURL, named: "Cargo.toml")
+    }
+
+    func isValidPythonProject(buildFolder: URL) -> Bool {
+        let folderName = buildFolder.lastPathComponent
+
+        // Python cache folders can be __pycache__, venv, .venv, env, .env
+        guard folderName == "__pycache__" ||
+              folderName == "venv" ||
+              folderName == ".venv" ||
+              folderName == "env" ||
+              folderName == ".env" else {
+            return false
+        }
+
+        // For __pycache__, just verify it exists (it's always Python)
+        if folderName == "__pycache__" {
+            return true
+        }
+
+        // For venv/env folders, look for Python-related files in parent
+        let parentURL = buildFolder.deletingLastPathComponent()
+
+        // Check for common Python project files
+        if directoryContainsFile(directory: parentURL, named: "requirements.txt") ||
+           directoryContainsFile(directory: parentURL, named: "setup.py") ||
+           directoryContainsFile(directory: parentURL, named: "pyproject.toml") ||
+           directoryContainsFile(directory: parentURL, named: "Pipfile") ||
+           directoryContainsFile(directory: parentURL, named: "poetry.lock") {
+            return true
+        }
+
+        return false
+    }
+
     func detectProjectType(buildFolder: URL) -> ProjectType? {
-        if isValidAndroidProject(buildFolder: buildFolder) {
-            return .android
-        } else if isValidSwiftPackage(buildFolder: buildFolder) {
+        // Order matters: check more specific types first
+        if isValidSwiftPackage(buildFolder: buildFolder) {
             return .swiftPackage
+        } else if isValidFlutterProject(buildFolder: buildFolder) {
+            return .flutter
+        } else if isValidNodeJSProject(buildFolder: buildFolder) {
+            return .nodeJS
+        } else if isValidRustProject(buildFolder: buildFolder) {
+            return .rust
+        } else if isValidPythonProject(buildFolder: buildFolder) {
+            return .python
+        } else if isValidAndroidProject(buildFolder: buildFolder) {
+            return .android
         } else if isValidiOSProject(buildFolder: buildFolder) {
             return .iOS
         }
