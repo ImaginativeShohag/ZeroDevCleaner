@@ -113,8 +113,8 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 // Try to parse archive info to get app name and version
                 displayName = parseArchiveName(from: itemURL) ?? itemURL.lastPathComponent
             case .deviceSupport:
-                // Device Support folders are already well-named (e.g., "15.0 (19A346)")
-                displayName = itemURL.lastPathComponent
+                // Parse device support to show iOS version and device model
+                displayName = parseDeviceSupportName(from: itemURL) ?? itemURL.lastPathComponent
             default:
                 // DerivedData and others use folder name
                 displayName = itemURL.lastPathComponent
@@ -159,5 +159,110 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         } else {
             return "\(appName) \(version)"
         }
+    }
+
+    /// Parses device support name to show iOS version and device model
+    private func parseDeviceSupportName(from deviceSupportURL: URL) -> String? {
+        let folderName = deviceSupportURL.lastPathComponent
+
+        // Try to find device information in the folder
+        var deviceModel: String?
+
+        // Look for .plist files that might contain device info
+        if let contents = try? fileManager.contentsOfDirectory(at: deviceSupportURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+            for fileURL in contents {
+                // Check for device info in plist files
+                if fileURL.pathExtension == "plist" {
+                    if let plistData = try? Data(contentsOf: fileURL),
+                       let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any] {
+
+                        // Look for device name or model
+                        if let productType = plist["ProductType"] as? String {
+                            deviceModel = mapDeviceIdentifierToName(productType)
+                        } else if let deviceName = plist["DeviceName"] as? String {
+                            deviceModel = deviceName
+                        }
+
+                        if deviceModel != nil { break }
+                    }
+                }
+            }
+        }
+
+        // Format: "iOS 15.0 (19A346) (iPhone 13 Pro Max)" or just "iOS 15.0 (19A346)"
+        if let deviceModel = deviceModel {
+            return "iOS \(folderName) (\(deviceModel))"
+        } else {
+            return "iOS \(folderName)"
+        }
+    }
+
+    /// Maps device identifier (e.g., "iPhone14,3") to human-readable name
+    private func mapDeviceIdentifierToName(_ identifier: String) -> String {
+        // Common device identifiers mapped to names
+        let deviceMap: [String: String] = [
+            // iPhone 15 series
+            "iPhone16,1": "iPhone 15 Pro",
+            "iPhone16,2": "iPhone 15 Pro Max",
+            "iPhone15,4": "iPhone 15 Plus",
+            "iPhone15,5": "iPhone 15",
+
+            // iPhone 14 series
+            "iPhone15,3": "iPhone 14 Pro Max",
+            "iPhone15,2": "iPhone 14 Pro",
+            "iPhone14,8": "iPhone 14 Plus",
+            "iPhone14,7": "iPhone 14",
+
+            // iPhone 13 series
+            "iPhone14,3": "iPhone 13 Pro Max",
+            "iPhone14,2": "iPhone 13 Pro",
+            "iPhone14,5": "iPhone 13",
+            "iPhone14,4": "iPhone 13 mini",
+
+            // iPhone 12 series
+            "iPhone13,4": "iPhone 12 Pro Max",
+            "iPhone13,3": "iPhone 12 Pro",
+            "iPhone13,2": "iPhone 12",
+            "iPhone13,1": "iPhone 12 mini",
+
+            // iPhone 11 series
+            "iPhone12,5": "iPhone 11 Pro Max",
+            "iPhone12,3": "iPhone 11 Pro",
+            "iPhone12,1": "iPhone 11",
+
+            // iPhone XS/XR series
+            "iPhone11,8": "iPhone XR",
+            "iPhone11,6": "iPhone XS Max",
+            "iPhone11,4": "iPhone XS Max",
+            "iPhone11,2": "iPhone XS",
+
+            // iPhone X/8 series
+            "iPhone10,6": "iPhone X",
+            "iPhone10,3": "iPhone X",
+            "iPhone10,5": "iPhone 8 Plus",
+            "iPhone10,4": "iPhone 8",
+            "iPhone10,2": "iPhone 8 Plus",
+            "iPhone10,1": "iPhone 8",
+
+            // iPad Pro
+            "iPad14,6": "iPad Pro 12.9-inch (6th gen)",
+            "iPad14,5": "iPad Pro 11-inch (4th gen)",
+            "iPad13,11": "iPad Pro 12.9-inch (5th gen)",
+            "iPad13,10": "iPad Pro 11-inch (3rd gen)",
+            "iPad8,12": "iPad Pro 12.9-inch (4th gen)",
+            "iPad8,11": "iPad Pro 11-inch (2nd gen)",
+
+            // iPad Air
+            "iPad13,17": "iPad Air (5th gen)",
+            "iPad13,2": "iPad Air (4th gen)",
+            "iPad11,4": "iPad Air (3rd gen)",
+
+            // iPad
+            "iPad13,19": "iPad (10th gen)",
+            "iPad12,2": "iPad (9th gen)",
+            "iPad11,7": "iPad (8th gen)",
+        ]
+
+        return deviceMap[identifier] ?? identifier
     }
 }
