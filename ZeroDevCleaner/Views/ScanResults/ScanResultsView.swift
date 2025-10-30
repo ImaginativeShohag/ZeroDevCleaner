@@ -169,12 +169,14 @@ struct ScanResultsView: View {
             // Results Table
             Table(viewModel.sortedAndFilteredResults) {
                 TableColumn("") { folder in
-                    Toggle("", isOn: Binding(
-                        get: { folder.isSelected },
-                        set: { _ in viewModel.toggleSelection(for: folder) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    .labelsHidden()
+                    Button {
+                        viewModel.toggleSelection(for: folder)
+                    } label: {
+                        Image(systemName: folder.isSelected ? "checkmark.square.fill" : "square")
+                            .foregroundStyle(.primary)
+                            .font(.system(size: 14))
+                    }
+                    .buttonStyle(.plain)
                 }
                 .width(40)
 
@@ -541,12 +543,14 @@ struct ScanResultsView: View {
                                                                     Spacer()
                                                                         .frame(width: 52)  // Extra indent for nested items
 
-                                                                    Toggle("", isOn: Binding(
-                                                                        get: { versionItem.isSelected },
-                                                                        set: { _ in viewModel.toggleNestedSubItemSelection(for: location, subItemId: subItem.id, nestedItemId: versionItem.id) }
-                                                                    ))
-                                                                    .toggleStyle(.checkbox)
-                                                                    .labelsHidden()
+                                                                    Button {
+                                                                        viewModel.toggleNestedSubItemSelection(for: location, subItemId: subItem.id, nestedItemId: versionItem.id)
+                                                                    } label: {
+                                                                        Image(systemName: versionItem.isSelected ? "checkmark.square.fill" : "square")
+                                                                            .foregroundStyle(.primary)
+                                                                            .font(.system(size: 11))
+                                                                    }
+                                                                    .buttonStyle(.plain)
 
                                                                     Image(systemName: "archivebox")
                                                                         .foregroundStyle(.tertiary)
@@ -610,12 +614,14 @@ struct ScanResultsView: View {
                                                     Spacer()
                                                         .frame(width: 20)
 
-                                                    Toggle("", isOn: Binding(
-                                                        get: { subItem.isSelected },
-                                                        set: { _ in viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id) }
-                                                    ))
-                                                    .toggleStyle(.checkbox)
-                                                    .labelsHidden()
+                                                    Button {
+                                                        viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id)
+                                                    } label: {
+                                                        Image(systemName: subItem.isSelected ? "checkmark.square.fill" : "square")
+                                                            .foregroundStyle(.primary)
+                                                            .font(.system(size: 12))
+                                                    }
+                                                    .buttonStyle(.plain)
 
                                                     Image(systemName: "folder.fill")
                                                         .foregroundStyle(.secondary)
