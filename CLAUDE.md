@@ -1,6 +1,6 @@
 # ZeroDevCleaner - Project Status
 
-## Last Updated: 2025-10-30
+## Last Updated: 2025-10-31
 
 ## ✅ Current Status: Core App Complete & Functional!
 
@@ -10,8 +10,8 @@
 - ✅ Full UI with filters, keyboard shortcuts, drag & drop
 - ✅ Error handling & comprehensive logging
 - ✅ 60+ tests passing
-- ✅ Static cache locations support (DerivedData, Xcode Archives, Device Support, Gradle, CocoaPods, npm, Yarn, Carthage)
-- ✅ Collapsible sub-items with individual selection for DerivedData, Xcode Archives, and Device Support
+- ✅ Static cache locations support (DerivedData, Xcode Archives, Device Support, Xcode Documentation Cache, Gradle, CocoaPods, npm, Yarn, Carthage)
+- ✅ Collapsible sub-items with individual selection for DerivedData, Xcode Archives, Device Support, and Xcode Documentation Cache
 - ✅ Settings panel with multiple scan locations
 - ✅ Streamlined UX with auto-scan of system caches
 - ✅ Drag & drop support in Settings for adding locations
@@ -243,6 +243,35 @@
 - `[commit hash]` - feat: parse archive names with version information
 - `7c7ae09` - feat: enhance Device Support names with device model
 
+### Xcode Documentation Cache Support ✅ COMPLETE!
+**Goal**: Add support for Xcode Documentation Cache with version parsing
+
+**Completed Features:**
+- ✅ **New Cache Type** - Added `xcodeDocumentationCache` to `StaticLocationType` enum
+  - Path: `~/Library/Developer/Xcode/DocumentationCache`
+  - Icon: `doc.text.fill` with teal color
+  - Supports sub-items (expandable list)
+
+- ✅ **Intelligent Version Parsing** - Regex-based parsing of nested folder structure
+  - Folder structure: `v289/NSOperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)`
+  - Parses version numbers from `NSOperatingSystemVersion` folder names
+  - Display format: "Cache from Xcode 26.0.0"
+  - Fallback to "Cache from Xcode (Unknown version)" if parsing fails
+
+- ✅ **Scanning Logic** - Implemented two-level folder scanning
+  - Scans version folders (v289, etc.) under DocumentationCache
+  - Scans NSOperatingSystemVersion folders inside each version folder
+  - Calculates size and last modified date for each cache version
+  - Sorts by modification date (newest first)
+
+**Technical Implementation:**
+- ✅ Extended `StaticLocationType` enum with `xcodeDocumentationCache` case
+- ✅ Updated all metadata properties (iconName, color, defaultPath, supportsSubItems)
+- ✅ Added `parseDocumentationCacheVersion()` method in `StaticLocationScanner`
+- ✅ Integrated with existing sub-item display and deletion flow
+
+**Commit**: `76f24d5` - feat: add Xcode Documentation Cache support
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -287,12 +316,13 @@
 **Feature 5**: Additional Project Types (Flutter, Node.js, Rust, Python) ✅
 **Feature 6**: UI/UX Improvements & Bug Fixes ✅
 **Feature 7**: Advanced System Caches & Tabbed Interface ✅
+**Feature 8**: Xcode Documentation Cache Support ✅
 
-**Total Commits**: 42
+**Total Commits**: 43
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
-**System Cache Locations**: 8 (DerivedData, Xcode Archives, Device Support, Gradle, CocoaPods, npm, Yarn, Carthage)
+**System Cache Locations**: 9 (DerivedData, Xcode Archives, Device Support, Xcode Documentation Cache, Gradle, CocoaPods, npm, Yarn, Carthage)
 
 ---
 
