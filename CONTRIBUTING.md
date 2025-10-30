@@ -69,7 +69,7 @@ Want to add support for a new build system? Great! Here's what you need:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ZeroDevCleaner.git
+git clone https://github.com/ImaginativeShohag/ZeroDevCleaner.git
 cd ZeroDevCleaner
 
 # Open in Xcode
@@ -256,8 +256,8 @@ How was this tested?
 
 ## Questions?
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/ZeroDevCleaner/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/ZeroDevCleaner/discussions)
+- **Issues**: [GitHub Issues](https://github.com/ImaginativeShohag/ZeroDevCleaner/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ImaginativeShohag/ZeroDevCleaner/discussions)
 
 ## Recognition
 
