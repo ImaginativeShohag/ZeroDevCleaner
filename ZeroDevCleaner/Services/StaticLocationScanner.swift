@@ -126,17 +126,30 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                     // Parse archive metadata
                     if let archiveInfo = parseArchiveInfo(from: archiveURL, size: size, lastModified: lastModified) {
                         archivesByApp[archiveInfo.appName, default: []].append(archiveInfo)
+                    } else {
+                        // Fallback: Use folder name if Info.plist can't be read
+                        Logger.scanning.warning("Could not parse Info.plist for archive: \(archiveURL.lastPathComponent, privacy: .public)")
+                        let folderName = archiveURL.lastPathComponent.replacingOccurrences(of: ".xcarchive", with: "")
+                        let fallbackInfo = ArchiveInfo(
+                            appName: folderName,
+                            version: "Unknown",
+                            build: nil,
+                            dateTime: "",
+                            path: archiveURL,
+                            size: size,
+                            lastModified: lastModified
+                        )
+                        archivesByApp[fallbackInfo.appName, default: []].append(fallbackInfo)
                     }
                 }
             }
 
             // Create grouped structure: App Name -> Versions
+            Logger.scanning.debug("Found \(archivesByApp.count) unique apps with archives")
             for (appName, archives) in archivesByApp {
+                Logger.scanning.debug("App '\(appName, privacy: .public)' has \(archives.count) archive(s)")
                 // Sort versions by date (newest first)
                 let sortedArchives = archives.sorted { $0.lastModified > $1.lastModified }
-
-                // Calculate total size for this app (all versions)
-                let totalSize = sortedArchives.reduce(0) { $0 + $1.size }
 
                 // Get the most recent modification date
                 let mostRecentDate = sortedArchives.first?.lastModified ?? Date()
@@ -154,10 +167,11 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 }
 
                 // Create app group item with versions as sub-items
+                // Size is 0 because this is just a grouping container, not a selectable folder
                 let appItem = StaticLocationSubItem(
                     name: appName,
                     path: sortedArchives.first!.path.deletingLastPathComponent(), // Use date folder as path
-                    size: totalSize,
+                    size: 0,  // App group is a logical grouping, not a physical folder
                     lastModified: mostRecentDate,
                     isSelected: false,
                     subItems: versionItems
@@ -167,7 +181,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             }
 
             // Sort apps alphabetically
-            return subItems.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            let sortedApps = subItems.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            Logger.scanning.debug("Returning \(sortedApps.count) app groups with total \(sortedApps.flatMap { $0.subItems }.count) archive versions")
+            return sortedApps
         }
 
         // For other types (DerivedData, Device Support), scan directly
