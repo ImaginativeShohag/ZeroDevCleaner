@@ -314,6 +314,49 @@
 - `7090cbf` - feat: add statistics tracking with SwiftData
 - `9705a4a` - feat: add Statistics Dashboard with charts and history
 
+### Statistics on Home Screen ✅ COMPLETE!
+**Goal**: Move statistics display to home screen for better UX and add Done button
+
+**Completed Features:**
+- ✅ **Statistics Sidebar on Home** - Statistics now visible on home screen at all times
+  - EmptyStateView redesigned with HStack layout
+  - Left side: Scan actions (Ready to scan / No locations)
+  - Right side: Statistics sidebar (280px width, semi-transparent background)
+  - Shows 4 summary cards: Total Cleaned, Sessions, Items Deleted, Avg per Session
+  - Displays recent 5 sessions with timestamp, item count, and size
+  - Empty state with chart icon when no statistics available
+
+- ✅ **StatsSummaryCard Component** - Compact statistics card for sidebar display
+  - Reusable component with title, value, icon, and color properties
+  - Horizontal layout with icon and text stacked vertically
+  - 12px padding, rounded corners, control background color
+
+- ✅ **Done Button in Results View** - Navigate back to home screen from results
+  - Done button in ScanResultsView header with "Scan Results" title
+  - Prominent bordered button with checkmark icon
+  - Calls `resetToHome()` method in MainViewModel
+
+- ✅ **resetToHome() Method** - Clean state management for returning to home
+  - Clears scanResults and staticLocations arrays
+  - Resets currentFilter to .all
+  - Clears scanProgress and currentScanPath
+  - Logged action for debugging
+
+- ✅ **Removed Statistics Modal** - Simplified navigation
+  - Removed Statistics toolbar button (Cmd+Shift+S)
+  - Removed Statistics menu item from View menu
+  - Removed showingStatistics state variable
+  - Removed .openStatistics notification
+  - Removed statistics sheet presentation
+
+**Technical Implementation:**
+- ✅ SwiftData @Query in EmptyStateView for live statistics updates
+- ✅ Automatic statistics computation with onChange handler
+- ✅ Seamless integration with existing EmptyStateView layout
+- ✅ Consistent with app's visual design language
+
+**Commit**: `2b2782d` - refactor: move statistics to home screen sidebar and add Done button
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -359,8 +402,9 @@
 **Feature 7**: Advanced System Caches & Tabbed Interface ✅
 **Feature 8**: Xcode Documentation Cache Support ✅
 **Feature 9**: Statistics Dashboard with SwiftData & Swift Charts ✅
+**Feature 10**: Statistics on Home Screen & Done Button ✅
 
-**Total Commits**: 46
+**Total Commits**: 47
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
