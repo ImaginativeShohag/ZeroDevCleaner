@@ -12,6 +12,7 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     case derivedData = "DerivedData"
     case xcodeArchives = "Xcode Archives"
     case deviceSupport = "Device Support"
+    case xcodeDocumentationCache = "Xcode Documentation Cache"
     case gradleCache = "Gradle Cache"
     case cocoapodsCache = "CocoaPods Cache"
     case npmCache = "npm Cache"
@@ -28,6 +29,8 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return "Xcode app archives from builds"
         case .deviceSupport:
             return "iOS device support files"
+        case .xcodeDocumentationCache:
+            return "Xcode documentation and symbol cache"
         case .gradleCache:
             return "Gradle dependencies and build cache"
         case .cocoapodsCache:
@@ -49,6 +52,8 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return "archivebox.fill"
         case .deviceSupport:
             return "iphone.gen3"
+        case .xcodeDocumentationCache:
+            return "doc.text.fill"
         case .gradleCache:
             return "cube.fill"
         case .cocoapodsCache:
@@ -70,6 +75,8 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return .indigo
         case .deviceSupport:
             return .pink
+        case .xcodeDocumentationCache:
+            return .teal
         case .gradleCache:
             return .green
         case .cocoapodsCache:
@@ -92,6 +99,8 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return home.appendingPathComponent("Library/Developer/Xcode/Archives")
         case .deviceSupport:
             return home.appendingPathComponent("Library/Developer/Xcode/iOS DeviceSupport")
+        case .xcodeDocumentationCache:
+            return home.appendingPathComponent("Library/Developer/Xcode/DocumentationCache")
         case .gradleCache:
             return home.appendingPathComponent(".gradle/caches")
         case .cocoapodsCache:
@@ -108,7 +117,7 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     /// Whether this location type should show subfolders
     var supportsSubItems: Bool {
         switch self {
-        case .derivedData, .xcodeArchives, .deviceSupport:
+        case .derivedData, .xcodeArchives, .deviceSupport, .xcodeDocumentationCache:
             return true
         default:
             return false

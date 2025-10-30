@@ -188,6 +188,61 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             return sortedApps
         }
 
+        // For Xcode Documentation Cache, scan through version folders
+        // Structure: DocumentationCache/v289/NSOperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)
+        if type == .xcodeDocumentationCache {
+            let versionFolders = try fileManager.contentsOfDirectory(
+                at: parentPath,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+
+            for versionFolder in versionFolders {
+                let resourceValues = try versionFolder.resourceValues(forKeys: [.isDirectoryKey])
+                guard resourceValues.isDirectory == true else { continue }
+
+                // Scan for NSOperatingSystemVersion folders inside this version folder
+                let osVersionFolders = try fileManager.contentsOfDirectory(
+                    at: versionFolder,
+                    includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+                    options: [.skipsHiddenFiles]
+                )
+
+                for osVersionURL in osVersionFolders {
+                    let osResourceValues = try osVersionURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+                    guard osResourceValues.isDirectory == true else { continue }
+
+                    let size = try await sizeCalculator.calculateSize(of: osVersionURL)
+                    let lastModified = osResourceValues.contentModificationDate ?? Date()
+
+                    // Parse version from folder name
+                    if let displayName = parseDocumentationCacheVersion(from: osVersionURL) {
+                        let subItem = StaticLocationSubItem(
+                            name: displayName,
+                            path: osVersionURL,
+                            size: size,
+                            lastModified: lastModified
+                        )
+                        subItems.append(subItem)
+                    } else {
+                        // Fallback: Use folder path
+                        Logger.scanning.warning("Could not parse version from documentation cache folder: \(osVersionURL.lastPathComponent, privacy: .public)")
+                        let displayName = "Cache from Xcode (Unknown version)"
+                        let subItem = StaticLocationSubItem(
+                            name: displayName,
+                            path: osVersionURL,
+                            size: size,
+                            lastModified: lastModified
+                        )
+                        subItems.append(subItem)
+                    }
+                }
+            }
+
+            // Sort by version (newest first based on modification date)
+            return subItems.sorted { $0.lastModified > $1.lastModified }
+        }
+
         // For other types (DerivedData, Device Support), scan directly
         let contents = try fileManager.contentsOfDirectory(
             at: parentPath,
@@ -418,5 +473,35 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         ]
 
         return deviceMap[identifier] ?? identifier
+    }
+
+    /// Parses Xcode Documentation Cache version from folder name
+    /// Folder format: "NSOperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)"
+    /// Returns: "Cache from Xcode 26.0.0"
+    private func parseDocumentationCacheVersion(from url: URL) -> String? {
+        let folderName = url.lastPathComponent
+
+        // Use regex to extract version numbers
+        // Pattern: majorVersion: (\d+), minorVersion: (\d+), patchVersion: (\d+)
+        let pattern = #"majorVersion:\s*(\d+),\s*minorVersion:\s*(\d+),\s*patchVersion:\s*(\d+)"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []),
+              let match = regex.firstMatch(in: folderName, options: [], range: NSRange(folderName.startIndex..., in: folderName)),
+              match.numberOfRanges == 4 else {
+            return nil
+        }
+
+        // Extract version components
+        guard let majorRange = Range(match.range(at: 1), in: folderName),
+              let minorRange = Range(match.range(at: 2), in: folderName),
+              let patchRange = Range(match.range(at: 3), in: folderName) else {
+            return nil
+        }
+
+        let major = String(folderName[majorRange])
+        let minor = String(folderName[minorRange])
+        let patch = String(folderName[patchRange])
+
+        return "Cache from Xcode \(major).\(minor).\(patch)"
     }
 }
