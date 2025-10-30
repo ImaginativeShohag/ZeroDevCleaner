@@ -375,6 +375,33 @@ final class MainViewModel {
     func toggleStaticLocationSelection(for location: StaticLocation) {
         if let index = staticLocations.firstIndex(where: { $0.id == location.id }) {
             staticLocations[index].isSelected.toggle()
+            let newState = staticLocations[index].isSelected
+
+            // If location has sub-items, toggle them all to match parent
+            if !staticLocations[index].subItems.isEmpty {
+                for subIndex in staticLocations[index].subItems.indices {
+                    staticLocations[index].subItems[subIndex].isSelected = newState
+                }
+            }
+        }
+    }
+
+    /// Toggles selection for a specific sub-item within a static location
+    func toggleSubItemSelection(for location: StaticLocation, subItemId: UUID) {
+        if let locationIndex = staticLocations.firstIndex(where: { $0.id == location.id }),
+           let subItemIndex = staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItemId }) {
+            staticLocations[locationIndex].subItems[subItemIndex].isSelected.toggle()
+
+            // Update parent selection based on sub-items
+            let allSelected = staticLocations[locationIndex].subItems.allSatisfy(\.isSelected)
+            let noneSelected = staticLocations[locationIndex].subItems.allSatisfy { !$0.isSelected }
+
+            if allSelected {
+                staticLocations[locationIndex].isSelected = true
+            } else if noneSelected {
+                staticLocations[locationIndex].isSelected = false
+            }
+            // For partial selection, we keep parent unselected but show in UI
         }
     }
 
@@ -430,9 +457,22 @@ final class MainViewModel {
         scanResults.filter(\.isSelected)
     }
 
-    /// Returns currently selected static locations
+    /// Returns currently selected static locations (parent level or sub-items)
     var selectedStaticLocations: [StaticLocation] {
         staticLocations.filter(\.isSelected)
+    }
+
+    /// Returns all selected sub-items across all static locations
+    var selectedSubItems: [(location: StaticLocation, subItem: StaticLocationSubItem)] {
+        var result: [(StaticLocation, StaticLocationSubItem)] = []
+        for location in staticLocations where !location.isSelected {
+            // Only include sub-items if parent is NOT selected
+            // (if parent is selected, the whole location is deleted)
+            for subItem in location.subItems where subItem.isSelected {
+                result.append((location, subItem))
+            }
+        }
+        return result
     }
 
     /// Total number of folders found
@@ -450,11 +490,12 @@ final class MainViewModel {
         ByteCountFormatter.string(fromByteCount: totalSpaceSize, countStyle: .file)
     }
 
-    /// Total size of selected folders (including static locations)
+    /// Total size of selected folders (including static locations and sub-items)
     var selectedSize: Int64 {
         let buildFoldersSize = selectedFolders.reduce(0) { $0 + $1.size }
         let staticLocationsSize = selectedStaticLocations.reduce(0) { $0 + $1.size }
-        return buildFoldersSize + staticLocationsSize
+        let subItemsSize = selectedSubItems.reduce(0) { $0 + $1.subItem.size }
+        return buildFoldersSize + staticLocationsSize + subItemsSize
     }
 
     /// Formatted selected size
@@ -462,16 +503,16 @@ final class MainViewModel {
         ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
 
-    /// Total count of selected items (build folders + static locations)
+    /// Total count of selected items (build folders + static locations + sub-items)
     var totalSelectedCount: Int {
-        selectedFolders.count + selectedStaticLocations.count
+        selectedFolders.count + selectedStaticLocations.count + selectedSubItems.count
     }
 
     // MARK: - Deletion
 
     /// Shows deletion confirmation dialog
     func showDeleteConfirmation() {
-        guard !selectedFolders.isEmpty || !selectedStaticLocations.isEmpty else { return }
+        guard !selectedFolders.isEmpty || !selectedStaticLocations.isEmpty || !selectedSubItems.isEmpty else { return }
         showDeletionConfirmation = true
     }
 
@@ -481,12 +522,13 @@ final class MainViewModel {
         deleteSelectedFolders()
     }
 
-    /// Deletes selected folders and static locations
+    /// Deletes selected folders, static locations, and sub-items
     private func deleteSelectedFolders() {
         let foldersToDelete = selectedFolders
         let staticToDelete = selectedStaticLocations
+        let subItemsToDelete = selectedSubItems
 
-        guard !foldersToDelete.isEmpty || !staticToDelete.isEmpty else { return }
+        guard !foldersToDelete.isEmpty || !staticToDelete.isEmpty || !subItemsToDelete.isEmpty else { return }
 
         // Prevent concurrent deletions
         guard !isDeleting else {
@@ -500,8 +542,8 @@ final class MainViewModel {
             return
         }
 
-        let totalItemsToDelete = foldersToDelete.count + staticToDelete.count
-        Logger.deletion.info("Starting deletion of \(totalItemsToDelete) items (\(foldersToDelete.count) build folders, \(staticToDelete.count) static locations)")
+        let totalItemsToDelete = foldersToDelete.count + staticToDelete.count + subItemsToDelete.count
+        Logger.deletion.info("Starting deletion of \(totalItemsToDelete) items (\(foldersToDelete.count) build folders, \(staticToDelete.count) static locations, \(subItemsToDelete.count) sub-items)")
 
         // Initialize progress tracking
         isDeleting = true
@@ -513,11 +555,14 @@ final class MainViewModel {
 
         Task {
             do {
-                // Combine URLs from both sources
-                let allURLs = foldersToDelete.map { $0.path } + staticToDelete.map { $0.path }
+                // Combine URLs from all sources
+                let allURLs = foldersToDelete.map { $0.path } +
+                              staticToDelete.map { $0.path } +
+                              subItemsToDelete.map { $0.subItem.path }
                 let allItems: [(name: String, size: Int64)] =
                     foldersToDelete.map { ($0.projectName, $0.size) } +
-                    staticToDelete.map { ($0.displayName, $0.size) }
+                    staticToDelete.map { ($0.displayName, $0.size) } +
+                    subItemsToDelete.map { ($0.subItem.name, $0.subItem.size) }
 
                 try await deleter.delete(urls: allURLs) { [weak self] current, total in
                     guard let self else { return }
@@ -546,6 +591,14 @@ final class MainViewModel {
                     }
                 }
 
+                // Remove successfully deleted sub-items
+                for (location, subItem) in subItemsToDelete {
+                    if let locationIndex = self.staticLocations.firstIndex(where: { $0.id == location.id }),
+                       let subItemIndex = self.staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItem.id }) {
+                        self.staticLocations[locationIndex].subItems.remove(at: subItemIndex)
+                    }
+                }
+
                 Logger.deletion.info("Successfully deleted \(totalItemsToDelete) items")
                 self.isDeleting = false
                 self.showDeletionProgress = false
@@ -567,6 +620,15 @@ final class MainViewModel {
                     for location in successfulStatic {
                         if let index = self.staticLocations.firstIndex(where: { $0.id == location.id }) {
                             self.staticLocations.remove(at: index)
+                        }
+                    }
+
+                    // Remove only successfully deleted sub-items
+                    let successfulSubItems = subItemsToDelete.filter { !failedSet.contains($0.subItem.path) }
+                    for (location, subItem) in successfulSubItems {
+                        if let locationIndex = self.staticLocations.firstIndex(where: { $0.id == location.id }),
+                           let subItemIndex = self.staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItem.id }) {
+                            self.staticLocations[locationIndex].subItems.remove(at: subItemIndex)
                         }
                     }
 

@@ -47,36 +47,39 @@ struct ScanResultsView: View {
                                         .labelsHidden()
                                         .disabled(!location.exists)
 
-                                        // Disclosure button for expandable items
-                                        if location.type.supportsSubItems && !location.subItems.isEmpty {
-                                            Button {
-                                                toggleExpansion(for: location.id)
-                                            } label: {
+                                        // Disclosure button for expandable items (with clickable row)
+                                        HStack(spacing: 8) {
+                                            if location.type.supportsSubItems && !location.subItems.isEmpty {
                                                 Image(systemName: expandedStaticLocations.contains(location.id) ? "chevron.down" : "chevron.right")
                                                     .font(.caption)
                                                     .foregroundStyle(.secondary)
                                             }
-                                            .buttonStyle(.plain)
-                                        }
 
-                                        Image(systemName: location.type.iconName)
-                                            .foregroundStyle(location.type.color)
-                                            .frame(width: 20)
+                                            Image(systemName: location.type.iconName)
+                                                .foregroundStyle(location.type.color)
+                                                .frame(width: 20)
 
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            HStack(spacing: 4) {
-                                                Text(location.displayName)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.medium)
-                                                if !location.subItems.isEmpty {
-                                                    Text("(\(location.subItems.count) items)")
-                                                        .font(.caption2)
-                                                        .foregroundStyle(.tertiary)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                HStack(spacing: 4) {
+                                                    Text(location.displayName)
+                                                        .font(.subheadline)
+                                                        .fontWeight(.medium)
+                                                    if !location.subItems.isEmpty {
+                                                        Text("(\(location.subItems.count) items)")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.tertiary)
+                                                    }
                                                 }
+                                                Text(location.type.description)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
                                             }
-                                            Text(location.type.description)
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
+                                        }
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            if location.type.supportsSubItems && !location.subItems.isEmpty {
+                                                toggleExpansion(for: location.id)
+                                            }
                                         }
 
                                         Spacer()
@@ -139,7 +142,14 @@ struct ScanResultsView: View {
                                             ForEach(location.subItems) { subItem in
                                                 HStack(spacing: 12) {
                                                     Spacer()
-                                                        .frame(width: 40)
+                                                        .frame(width: 20)
+
+                                                    Toggle("", isOn: Binding(
+                                                        get: { subItem.isSelected },
+                                                        set: { _ in viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id) }
+                                                    ))
+                                                    .toggleStyle(.checkbox)
+                                                    .labelsHidden()
 
                                                     Image(systemName: "folder.fill")
                                                         .foregroundStyle(.secondary)
