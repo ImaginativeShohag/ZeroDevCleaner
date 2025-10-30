@@ -17,8 +17,11 @@ struct ScanResultsView: View {
             // Tab Picker
             Picker("", selection: $viewModel.currentTab) {
                 ForEach(MainViewModel.ResultsTab.allCases, id: \.self) { tab in
-                    Label(tab.rawValue, systemImage: tab.icon)
-                        .tag(tab)
+                    HStack(spacing: 6) {
+                        Image(systemName: tab.icon)
+                        Text(tab.rawValue)
+                    }
+                    .tag(tab)
                 }
             }
             .pickerStyle(.segmented)
