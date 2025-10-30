@@ -365,13 +365,18 @@ struct ScanResultsView: View {
                         ForEach(viewModel.staticLocations) { location in
                             VStack(spacing: 0) {
                                 // Main location row
+                                // Parent checkbox with partial selection support
                                 HStack(spacing: 12) {
-                                    Toggle("", isOn: Binding(
-                                        get: { location.isSelected },
-                                        set: { _ in viewModel.toggleStaticLocationSelection(for: location) }
-                                    ))
-                                    .toggleStyle(.checkbox)
-                                    .labelsHidden()
+                                    Button {
+                                        if location.exists {
+                                            viewModel.toggleStaticLocationSelection(for: location)
+                                        }
+                                    } label: {
+                                        Image(systemName: getCheckboxIcon(for: location))
+                                            .foregroundStyle(location.exists ? .primary : .tertiary)
+                                            .font(.system(size: 14))
+                                    }
+                                    .buttonStyle(.plain)
                                     .disabled(!location.exists)
 
                                     // Disclosure button for expandable items (with clickable row)
@@ -475,6 +480,16 @@ struct ScanResultsView: View {
                                                     HStack(spacing: 12) {
                                                         Spacer()
                                                             .frame(width: 20)
+
+                                                        // App group checkbox with partial selection support
+                                                        Button {
+                                                            viewModel.toggleSubItemSelection(for: location, subItemId: subItem.id)
+                                                        } label: {
+                                                            Image(systemName: getCheckboxIconForSubItem(subItem))
+                                                                .foregroundStyle(.primary)
+                                                                .font(.system(size: 12))
+                                                        }
+                                                        .buttonStyle(.plain)
 
                                                         // Chevron for expand/collapse
                                                         Image(systemName: expandedSubItems.contains(subItem.id) ? "chevron.down" : "chevron.right")
@@ -746,6 +761,28 @@ struct ScanResultsView: View {
             expandedSubItems.remove(subItemId)
         } else {
             expandedSubItems.insert(subItemId)
+        }
+    }
+
+    // Helper to determine checkbox icon for parent location
+    private func getCheckboxIcon(for location: StaticLocation) -> String {
+        if location.isSelected {
+            return "checkmark.square.fill"
+        } else if location.someSubItemsSelected {
+            return "minus.square.fill"  // Partial selection
+        } else {
+            return "square"
+        }
+    }
+
+    // Helper to determine checkbox icon for sub-item (app group)
+    private func getCheckboxIconForSubItem(_ subItem: StaticLocationSubItem) -> String {
+        if subItem.isSelected {
+            return "checkmark.square.fill"
+        } else if subItem.someSubItemsSelected {
+            return "minus.square.fill"  // Partial selection
+        } else {
+            return "square"
         }
     }
 }

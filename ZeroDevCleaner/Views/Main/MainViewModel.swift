@@ -415,6 +415,13 @@ final class MainViewModel {
             if !staticLocations[index].subItems.isEmpty {
                 for subIndex in staticLocations[index].subItems.indices {
                     staticLocations[index].subItems[subIndex].isSelected = newState
+
+                    // Also toggle nested sub-items (e.g., archive versions)
+                    if !staticLocations[index].subItems[subIndex].subItems.isEmpty {
+                        for nestedIndex in staticLocations[index].subItems[subIndex].subItems.indices {
+                            staticLocations[index].subItems[subIndex].subItems[nestedIndex].isSelected = newState
+                        }
+                    }
                 }
             }
         }
@@ -424,18 +431,20 @@ final class MainViewModel {
     func toggleSubItemSelection(for location: StaticLocation, subItemId: UUID) {
         if let locationIndex = staticLocations.firstIndex(where: { $0.id == location.id }),
            let subItemIndex = staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItemId }) {
+
+            // Toggle the sub-item
             staticLocations[locationIndex].subItems[subItemIndex].isSelected.toggle()
+            let newState = staticLocations[locationIndex].subItems[subItemIndex].isSelected
 
-            // Update parent selection based on sub-items
-            let allSelected = staticLocations[locationIndex].subItems.allSatisfy(\.isSelected)
-            let noneSelected = staticLocations[locationIndex].subItems.allSatisfy { !$0.isSelected }
-
-            if allSelected {
-                staticLocations[locationIndex].isSelected = true
-            } else if noneSelected {
-                staticLocations[locationIndex].isSelected = false
+            // If this sub-item has nested items (e.g., archive app group), select/deselect all nested items too
+            if !staticLocations[locationIndex].subItems[subItemIndex].subItems.isEmpty {
+                for nestedIndex in staticLocations[locationIndex].subItems[subItemIndex].subItems.indices {
+                    staticLocations[locationIndex].subItems[subItemIndex].subItems[nestedIndex].isSelected = newState
+                }
             }
-            // For partial selection, we keep parent unselected but show in UI
+
+            // Update parent location selection based on all sub-items
+            updateParentSelection(at: locationIndex)
         }
     }
 
@@ -444,18 +453,66 @@ final class MainViewModel {
         if let locationIndex = staticLocations.firstIndex(where: { $0.id == location.id }),
            let subItemIndex = staticLocations[locationIndex].subItems.firstIndex(where: { $0.id == subItemId }),
            let nestedIndex = staticLocations[locationIndex].subItems[subItemIndex].subItems.firstIndex(where: { $0.id == nestedItemId }) {
+
             // Toggle the nested item
             staticLocations[locationIndex].subItems[subItemIndex].subItems[nestedIndex].isSelected.toggle()
 
-            // Update parent selection based on nested items
-            let allNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy(\.isSelected)
-            let noneNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy { !$0.isSelected }
+            // Update app group selection based on nested items
+            updateSubItemSelection(at: locationIndex, subItemIndex: subItemIndex)
 
-            if allNestedSelected {
-                staticLocations[locationIndex].subItems[subItemIndex].isSelected = true
-            } else if noneNestedSelected {
-                staticLocations[locationIndex].subItems[subItemIndex].isSelected = false
+            // Update parent location selection based on all sub-items
+            updateParentSelection(at: locationIndex)
+        }
+    }
+
+    /// Updates sub-item (app group) selection based on its nested items
+    private func updateSubItemSelection(at locationIndex: Int, subItemIndex: Int) {
+        let allNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy(\.isSelected)
+        let noneNestedSelected = staticLocations[locationIndex].subItems[subItemIndex].subItems.allSatisfy { !$0.isSelected }
+
+        if allNestedSelected {
+            staticLocations[locationIndex].subItems[subItemIndex].isSelected = true
+        } else if noneNestedSelected {
+            staticLocations[locationIndex].subItems[subItemIndex].isSelected = false
+        } else {
+            // Partial selection - keep unselected but UI will show minus icon
+            staticLocations[locationIndex].subItems[subItemIndex].isSelected = false
+        }
+    }
+
+    /// Updates parent location selection based on all sub-items (including nested)
+    private func updateParentSelection(at locationIndex: Int) {
+        // Check if we need to look at nested items too
+        var allSelected = true
+        var noneSelected = true
+
+        for subItem in staticLocations[locationIndex].subItems {
+            if !subItem.subItems.isEmpty {
+                // This sub-item has nested items - check them all
+                for nestedItem in subItem.subItems {
+                    if nestedItem.isSelected {
+                        noneSelected = false
+                    } else {
+                        allSelected = false
+                    }
+                }
+            } else {
+                // Regular sub-item without nesting
+                if subItem.isSelected {
+                    noneSelected = false
+                } else {
+                    allSelected = false
+                }
             }
+        }
+
+        if allSelected {
+            staticLocations[locationIndex].isSelected = true
+        } else if noneSelected {
+            staticLocations[locationIndex].isSelected = false
+        } else {
+            // Partial selection - keep unselected but UI will show minus icon
+            staticLocations[locationIndex].isSelected = false
         }
     }
 
