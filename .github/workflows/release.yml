@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build macOS App
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
       - name: Checkout code
@@ -52,7 +52,7 @@ jobs:
             ZeroDevCleaner.dmg
 
           # Get version from Info.plist if available
-          VERSION=$(defaults read "${{ steps.locate.outputs.app_path }}/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "1.0.0")
+          VERSION=$(defaults read "${{ steps.locate.outputs.app_path }}/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "0.0.0")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           # Rename with version
