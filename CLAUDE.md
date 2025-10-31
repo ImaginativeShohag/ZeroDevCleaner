@@ -436,6 +436,50 @@
 
 **Commit**: `f96f204` - refactor: convert RecentFoldersManager to singleton pattern
 
+### Test Suite Updates for Refactored API ✅ COMPLETE!
+**Goal**: Fix unit and integration tests to align with MainViewModel API changes
+
+**Completed Features:**
+- ✅ **WorkflowIntegrationTests Updates** - All integration tests updated for new scanning API
+  - Replaced `selectFolder()` with `startScan(locations:)` using `ScanLocation` model
+  - Updated `deleteSelectedFolders()` calls to `confirmDeletion()`
+  - Changed assertions from `deletedFolders` to `deletedURLs` array
+  - Added `MockStaticLocationScanner` for static location testing
+  - Fixed test expectations to match new error handling (scanCancelled vs noResultsFound)
+
+- ✅ **MainViewModelTests Updates** - All unit tests aligned with new ViewModel API
+  - Removed obsolete `selectedFolder` property tests
+  - Updated all scan tests to use `ScanLocation` parameter
+  - Renamed test methods from `deleteSelectedFolders` to `confirmDeletion`
+  - Fixed assertions for URL-based deletion tracking
+  - Updated mock service expectations
+
+- ✅ **MockServices Enhancements** - Improved test mocks for better test coverage
+  - Added `deletedURLs` property to `MockFileDeleter` for URL-based tracking
+  - Implemented `delete(urls:progressHandler:)` method in `MockFileDeleter`
+  - Created new `MockStaticLocationScanner` implementing `StaticLocationScannerProtocol`
+  - Added progress handler support for scan testing
+
+- ✅ **Framework Migration** - Migrated from Testing to XCTest framework
+  - Converted `ZeroDevCleanerTests.swift` from `@Test` to XCTest format
+  - Changed base class from struct to `XCTestCase`
+  - Updated test method signatures to standard XCTest format
+
+- ✅ **ErrorTests Refinement** - Updated error message assertions
+  - Fixed assertion for disk space error message ("Free up space" → "Free up some space")
+
+**Additional Changes:**
+- ✅ Updated README.md badge label ("Build" → "Build Check")
+- ✅ Development team configuration update in project settings
+
+**Test Results:**
+- ✅ All 60+ tests passing
+- ✅ Zero build warnings
+- ✅ Complete test coverage for refactored MainViewModel
+- ✅ Integration tests cover full user workflows with new API
+
+**Commit**: `dbce099` - test: fix unit and integration tests for refactored MainViewModel
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -484,8 +528,9 @@
 **Feature 10**: Statistics on Home Screen & Done Button ✅
 **Feature 11**: Improved Home Screen Layout with Vertical Statistics ✅
 **Feature 12**: Recent Folders Manager Singleton Refactor ✅
+**Feature 13**: Test Suite Updates for Refactored API ✅
 
-**Total Commits**: 49
+**Total Commits**: 50
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
