@@ -5,12 +5,14 @@
 //  Created by Md. Mahmudul Hasan Shohag on 29/10/25.
 //
 
-import Testing
+import XCTest
+@testable import ZeroDevCleaner
 
-struct ZeroDevCleanerTests {
+final class ZeroDevCleanerTests: XCTestCase {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    func testExample() async throws {
+        // Write your test here and use APIs like `XCTAssert(...)` to check expected conditions.
+        XCTAssertTrue(true)
     }
 
 }

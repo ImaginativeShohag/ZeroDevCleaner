@@ -35,6 +35,7 @@ final class MockFileScanner: FileScannerProtocol, @unchecked Sendable {
 final class MockFileDeleter: FileDeleterProtocol, @unchecked Sendable {
     var deleteCalled: Bool = false
     var deletedFolders: [BuildFolder] = []
+    var deletedURLs: [URL] = []
     var shouldThrowError: Error?
 
     func delete(
@@ -52,5 +53,46 @@ final class MockFileDeleter: FileDeleterProtocol, @unchecked Sendable {
         for i in 0..<folders.count {
             progressHandler?(i + 1, folders.count)
         }
+    }
+
+    func delete(
+        urls: [URL],
+        progressHandler: DeletionProgressHandler?
+    ) async throws {
+        deleteCalled = true
+        deletedURLs = urls
+
+        if let error = shouldThrowError {
+            throw error
+        }
+
+        // Simulate progress
+        for i in 0..<urls.count {
+            progressHandler?(i + 1, urls.count)
+        }
+    }
+}
+
+final class MockStaticLocationScanner: StaticLocationScannerProtocol, @unchecked Sendable {
+    var mockStaticLocations: [StaticLocation] = []
+    var shouldThrowError: Error?
+    var scanCalled: Bool = false
+
+    func scanStaticLocations(
+        types: [StaticLocationType],
+        progressHandler: ((String, Int) -> Void)?
+    ) async throws -> [StaticLocation] {
+        scanCalled = true
+
+        if let error = shouldThrowError {
+            throw error
+        }
+
+        // Simulate progress
+        for (index, _) in types.enumerated() {
+            progressHandler?("Scanning", index + 1)
+        }
+
+        return mockStaticLocations
     }
 }

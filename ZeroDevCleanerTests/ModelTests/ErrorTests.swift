@@ -84,7 +84,7 @@ final class ErrorTests: XCTestCase {
 
         // Then
         XCTAssertEqual(error.errorDescription, "Out of Disk Space")
-        XCTAssertTrue(error.recoverySuggestion?.contains("Free up space") ?? false)
+        XCTAssertTrue(error.recoverySuggestion?.contains("Free up some space") ?? false)
     }
 
     func test_folderInUse_hasCorrectDescription() {

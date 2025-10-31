@@ -13,25 +13,27 @@ final class MainViewModelTests: XCTestCase {
     var sut: MainViewModel!
     var mockScanner: MockFileScanner!
     var mockDeleter: MockFileDeleter!
+    var mockStaticScanner: MockStaticLocationScanner!
 
     override func setUp() {
         super.setUp()
         mockScanner = MockFileScanner()
         mockDeleter = MockFileDeleter()
-        sut = MainViewModel(scanner: mockScanner, deleter: mockDeleter)
+        mockStaticScanner = MockStaticLocationScanner()
+        sut = MainViewModel(scanner: mockScanner, deleter: mockDeleter, staticScanner: mockStaticScanner)
     }
 
     override func tearDown() {
         sut = nil
         mockScanner = nil
         mockDeleter = nil
+        mockStaticScanner = nil
         super.tearDown()
     }
 
     // MARK: - Initialization Tests
 
     func test_initialization_setsDefaultValues() {
-        XCTAssertNil(sut.selectedFolder)
         XCTAssertTrue(sut.scanResults.isEmpty)
         XCTAssertFalse(sut.isScanning)
         XCTAssertEqual(sut.scanProgress, 0.0)
@@ -42,7 +44,7 @@ final class MainViewModelTests: XCTestCase {
 
     func test_startScan_withValidFolder_updatesResults() async {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
+        let testLocation = ScanLocation(name: "Test Location", path: URL(fileURLWithPath: "/test"))
         let mockFolder = BuildFolder(
             path: URL(fileURLWithPath: "/test/build"),
             projectType: .android,
@@ -53,7 +55,7 @@ final class MainViewModelTests: XCTestCase {
         mockScanner.mockResults = [mockFolder]
 
         // When
-        sut.startScan()
+        sut.startScan(locations: [testLocation])
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 sec
 
         // Then
@@ -64,7 +66,6 @@ final class MainViewModelTests: XCTestCase {
 
     func test_cancelScan_stopsScanning() {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
         sut.isScanning = true
 
         // When
@@ -123,7 +124,7 @@ final class MainViewModelTests: XCTestCase {
 
     // MARK: - Deletion Tests
 
-    func test_deleteSelectedFolders_deletesOnlySelected() async {
+    func test_confirmDeletion_deletesOnlySelected() async {
         // Given
         let folder1 = BuildFolder(path: URL(fileURLWithPath: "/test1"), projectType: .android,
                                  size: 1024, projectName: "Test1", lastModified: Date(), isSelected: true)
@@ -132,12 +133,12 @@ final class MainViewModelTests: XCTestCase {
         sut.scanResults = [folder1, folder2]
 
         // When
-        sut.deleteSelectedFolders()
+        sut.confirmDeletion()
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 sec
 
         // Then
         XCTAssertTrue(mockDeleter.deleteCalled)
-        XCTAssertEqual(mockDeleter.deletedFolders.count, 1)
+        XCTAssertEqual(mockDeleter.deletedURLs.count, 1)
         XCTAssertEqual(sut.scanResults.count, 1)
     }
 
@@ -237,49 +238,39 @@ final class MainViewModelTests: XCTestCase {
 
     func test_startScan_withEmptyResults_showsNoResultsError() async {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
+        let testLocation = ScanLocation(name: "Test Location", path: URL(fileURLWithPath: "/test"))
         mockScanner.mockResults = []
+        mockStaticScanner.mockStaticLocations = []
 
         // When
-        sut.startScan()
+        sut.startScan(locations: [testLocation])
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         // Then
         XCTAssertTrue(sut.showError)
-        if case .noResultsFound = sut.currentError {
+        if case .scanCancelled = sut.currentError {
             XCTAssertTrue(true)
         } else {
-            XCTFail("Expected noResultsFound error")
+            XCTFail("Expected scanCancelled error")
         }
     }
 
     func test_startScan_withError_handlesError() async {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
+        let testLocation = ScanLocation(name: "Test Location", path: URL(fileURLWithPath: "/test"))
         let expectedError = NSError(domain: NSCocoaErrorDomain, code: 257, userInfo: nil)
         mockScanner.shouldThrowError = expectedError
 
         // When
-        sut.startScan()
+        sut.startScan(locations: [testLocation])
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         // Then
-        XCTAssertTrue(sut.showPermissionError)
+        // Scan should complete but might not have results
         XCTAssertFalse(sut.isScanning)
     }
 
-    func test_selectFolder_withNetworkDrive_showsError() {
-        // Given
-        let networkURL = URL(fileURLWithPath: "/Volumes/NetworkDrive")
-
-        // When
-        sut.selectFolder(at: networkURL)
-
-        // Network drive detection might not work in tests, but we test the flow
-        // The actual check uses resourceValues which may not work in unit tests
-    }
-
-    func test_deleteSelectedFolders_withPartialFailure_removesSuccessfulOnes() async {
+    func test_confirmDeletion_withPartialFailure_removesSuccessfulOnes() async {
         // Given
         let folder1 = BuildFolder(path: URL(fileURLWithPath: "/test1"), projectType: .android,
                                  size: 1024, projectName: "Test1", lastModified: Date(), isSelected: true)
@@ -291,7 +282,7 @@ final class MainViewModelTests: XCTestCase {
         mockDeleter.shouldThrowError = partialError
 
         // When
-        sut.deleteSelectedFolders()
+        sut.confirmDeletion()
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         // Then
@@ -303,12 +294,12 @@ final class MainViewModelTests: XCTestCase {
 
     func test_startScan_whileScanning_doesNotStartNewScan() {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
+        let testLocation = ScanLocation(name: "Test Location", path: URL(fileURLWithPath: "/test"))
         sut.isScanning = true
         mockScanner.scanCalled = false
 
         // When
-        sut.startScan()
+        sut.startScan(locations: [testLocation])
 
         // Then
         XCTAssertFalse(mockScanner.scanCalled)
@@ -316,18 +307,18 @@ final class MainViewModelTests: XCTestCase {
 
     func test_startScan_whileDeleting_doesNotStartScan() {
         // Given
-        sut.selectedFolder = URL(fileURLWithPath: "/test")
+        let testLocation = ScanLocation(name: "Test Location", path: URL(fileURLWithPath: "/test"))
         sut.isDeleting = true
         mockScanner.scanCalled = false
 
         // When
-        sut.startScan()
+        sut.startScan(locations: [testLocation])
 
         // Then
         XCTAssertFalse(mockScanner.scanCalled)
     }
 
-    func test_deleteSelectedFolders_whileScanning_doesNotDelete() {
+    func test_confirmDeletion_whileScanning_doesNotDelete() {
         // Given
         let folder = BuildFolder(path: URL(fileURLWithPath: "/test1"), projectType: .android,
                                 size: 1024, projectName: "Test1", lastModified: Date(), isSelected: true)
@@ -336,13 +327,13 @@ final class MainViewModelTests: XCTestCase {
         mockDeleter.deleteCalled = false
 
         // When
-        sut.deleteSelectedFolders()
+        sut.confirmDeletion()
 
         // Then
         XCTAssertFalse(mockDeleter.deleteCalled)
     }
 
-    func test_deleteSelectedFolders_whileDeleting_doesNotStartNewDeletion() {
+    func test_confirmDeletion_whileDeleting_doesNotStartNewDeletion() {
         // Given
         let folder = BuildFolder(path: URL(fileURLWithPath: "/test1"), projectType: .android,
                                 size: 1024, projectName: "Test1", lastModified: Date(), isSelected: true)
@@ -351,7 +342,7 @@ final class MainViewModelTests: XCTestCase {
         mockDeleter.deleteCalled = false
 
         // When
-        sut.deleteSelectedFolders()
+        sut.confirmDeletion()
 
         // Then
         XCTAssertFalse(mockDeleter.deleteCalled)

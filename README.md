@@ -5,7 +5,7 @@
 ![macOS](https://img.shields.io/badge/macOS-15.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
-[![Build](https://github.com/ImaginativeShohag/ZeroDevCleaner/actions/workflows/build.yml/badge.svg)](https://github.com/ImaginativeShohag/ZeroDevCleaner/actions/workflows/build.yml)
+[![Build Check](https://github.com/ImaginativeShohag/ZeroDevCleaner/actions/workflows/build.yml/badge.svg)](https://github.com/ImaginativeShohag/ZeroDevCleaner/actions/workflows/build.yml)
 
 ZeroDevCleaner helps developers quickly identify and remove build artifacts, caches, and temporary files that accumulate during software development. With support for multiple project types and system caches, you can reclaim gigabytes of disk space in seconds.
 

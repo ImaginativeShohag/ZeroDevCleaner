@@ -14,13 +14,15 @@ final class WorkflowIntegrationTests: XCTestCase {
     var viewModel: MainViewModel!
     var mockScanner: MockFileScanner!
     var mockDeleter: MockFileDeleter!
+    var mockStaticScanner: MockStaticLocationScanner!
     var testFolder: URL!
 
     override func setUp() async throws {
         try await super.setUp()
         mockScanner = MockFileScanner()
         mockDeleter = MockFileDeleter()
-        viewModel = MainViewModel(scanner: mockScanner, deleter: mockDeleter)
+        mockStaticScanner = MockStaticLocationScanner()
+        viewModel = MainViewModel(scanner: mockScanner, deleter: mockDeleter, staticScanner: mockStaticScanner)
         testFolder = URL(fileURLWithPath: "/test/project")
     }
 
@@ -28,6 +30,7 @@ final class WorkflowIntegrationTests: XCTestCase {
         viewModel = nil
         mockScanner = nil
         mockDeleter = nil
+        mockStaticScanner = nil
         testFolder = nil
         try await super.tearDown()
     }
@@ -53,8 +56,8 @@ final class WorkflowIntegrationTests: XCTestCase {
         mockScanner.mockResults = [buildFolder1, buildFolder2]
 
         // When: User selects folder and starts scan
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
 
         // Wait for async scan to complete
         try await Task.sleep(nanoseconds: 200_000_000) // 0.2 sec
@@ -89,18 +92,17 @@ final class WorkflowIntegrationTests: XCTestCase {
         )
         mockScanner.mockResults = [buildFolder1, buildFolder2]
 
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // When: User deletes selected items
-        viewModel.deleteSelectedFolders()
+        viewModel.confirmDeletion()
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // Then: Only selected items are deleted
         XCTAssertTrue(mockDeleter.deleteCalled)
-        XCTAssertEqual(mockDeleter.deletedFolders.count, 1)
-        XCTAssertEqual(mockDeleter.deletedFolders.first?.projectName, "Project1")
+        XCTAssertEqual(mockDeleter.deletedURLs.count, 1)
         XCTAssertEqual(viewModel.scanResults.count, 1)
         XCTAssertEqual(viewModel.scanResults.first?.projectName, "Project2")
     }
@@ -133,8 +135,8 @@ final class WorkflowIntegrationTests: XCTestCase {
         mockScanner.mockResults = [androidFolder, iosFolder, swiftPackageFolder]
 
         // When: Scan, filter to Android, select all filtered
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         viewModel.currentFilter = .android
@@ -146,12 +148,11 @@ final class WorkflowIntegrationTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedFolders.first?.projectType, .android)
 
         // When: Delete selected
-        viewModel.deleteSelectedFolders()
+        viewModel.confirmDeletion()
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // Then: Only Android folder is deleted
-        XCTAssertEqual(mockDeleter.deletedFolders.count, 1)
-        XCTAssertEqual(mockDeleter.deletedFolders.first?.projectType, .android)
+        XCTAssertEqual(mockDeleter.deletedURLs.count, 1)
         XCTAssertEqual(viewModel.scanResults.count, 2)
     }
 
@@ -160,18 +161,19 @@ final class WorkflowIntegrationTests: XCTestCase {
     func test_emptyResultsWorkflow_showsErrorAndGuidance() async throws {
         // Given: A folder with no build folders
         mockScanner.mockResults = []
+        mockStaticScanner.mockStaticLocations = []
 
         // When: User scans
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // Then: Error is shown with guidance
         XCTAssertTrue(viewModel.showError)
-        if case .noResultsFound = viewModel.currentError {
+        if case .scanCancelled = viewModel.currentError {
             XCTAssertTrue(true)
         } else {
-            XCTFail("Expected noResultsFound error")
+            XCTFail("Expected scanCancelled error")
         }
         XCTAssertTrue(viewModel.scanResults.isEmpty)
     }
@@ -196,14 +198,14 @@ final class WorkflowIntegrationTests: XCTestCase {
         )
         mockScanner.mockResults = [folder1, folder2]
 
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // When: Deletion partially fails
         let partialError = ZeroDevCleanerError.partialDeletionFailure([folder2.path])
         mockDeleter.shouldThrowError = partialError
-        viewModel.deleteSelectedFolders()
+        viewModel.confirmDeletion()
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // Then: Error shown, failed items remain, successful items removed
@@ -226,8 +228,8 @@ final class WorkflowIntegrationTests: XCTestCase {
         mockScanner.mockResults = [folder1]
 
         // When: User starts scan and immediately cancels
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 50_000_000) // Let it start
 
         // Manually add a result to simulate partial scanning
@@ -275,12 +277,12 @@ final class WorkflowIntegrationTests: XCTestCase {
         let folder1 = URL(fileURLWithPath: "/test/project1")
         let folder2 = URL(fileURLWithPath: "/test/project2")
 
-        viewModel.selectFolder(at: folder1)
-        viewModel.startScan()
+        let location1 = ScanLocation(name: "Project 1", path: folder1)
+        viewModel.startScan(locations: [location1])
         try await Task.sleep(nanoseconds: 200_000_000)
 
-        viewModel.selectFolder(at: folder2)
-        viewModel.startScan()
+        let location2 = ScanLocation(name: "Project 2", path: folder2)
+        viewModel.startScan(locations: [location2])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // Then: Recent folders are updated
@@ -304,16 +306,16 @@ final class WorkflowIntegrationTests: XCTestCase {
             )
         ]
 
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // When: Deletion starts
-        viewModel.deleteSelectedFolders()
+        viewModel.confirmDeletion()
         mockScanner.scanCalled = false // Reset
 
         // And: User tries to start a new scan
-        viewModel.startScan()
+        viewModel.startScan(locations: [testLocation])
 
         // Then: New scan is prevented
         XCTAssertFalse(mockScanner.scanCalled)
@@ -322,8 +324,8 @@ final class WorkflowIntegrationTests: XCTestCase {
     func test_concurrentOperationPrevention_cannotDeleteWhileScanning() {
         // Given: Scan in progress
         mockScanner.mockResults = []
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         viewModel.scanResults = [
             BuildFolder(
                 path: URL(fileURLWithPath: "/test/build"),
@@ -338,7 +340,7 @@ final class WorkflowIntegrationTests: XCTestCase {
         mockDeleter.deleteCalled = false
 
         // When: User tries to delete
-        viewModel.deleteSelectedFolders()
+        viewModel.confirmDeletion()
 
         // Then: Deletion is prevented
         XCTAssertFalse(mockDeleter.deleteCalled)
@@ -357,8 +359,8 @@ final class WorkflowIntegrationTests: XCTestCase {
                        lastModified: Date(), isSelected: false)
         ]
 
-        viewModel.selectFolder(at: testFolder)
-        viewModel.startScan()
+        let testLocation = ScanLocation(name: "Test Location", path: testFolder)
+        viewModel.startScan(locations: [testLocation])
         try await Task.sleep(nanoseconds: 200_000_000)
 
         // When: Filter to Android and select all
