@@ -10,20 +10,20 @@ import XCTest
 
 @MainActor
 final class RecentFoldersManagerTests: XCTestCase {
-    var sut: RecentFoldersManager!
+    var sut: RecentFoldersManager {
+        RecentFoldersManager.shared
+    }
     let testUserDefaultsKey = "test_recent_folders"
     var tempDir: URL!
 
     override func setUp() {
         super.setUp()
+        // Clear any existing test data first
+        UserDefaults.standard.removeObject(forKey: "recent_folders")
+
         // Create a temporary directory for testing
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-        // Use a test-specific key to avoid polluting real user defaults
-        sut = RecentFoldersManager()
-        // Clear any existing test data
-        UserDefaults.standard.removeObject(forKey: "recent_folders")
     }
 
     override func tearDown() {
@@ -32,7 +32,6 @@ final class RecentFoldersManagerTests: XCTestCase {
         if let tempDir = tempDir {
             try? FileManager.default.removeItem(at: tempDir)
         }
-        sut = nil
         super.tearDown()
     }
 
@@ -130,11 +129,12 @@ final class RecentFoldersManagerTests: XCTestCase {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         sut.addFolder(folder)
 
-        // When
-        let newManager = RecentFoldersManager()
+        // When - Access the singleton again (simulates app restart)
+        let persistedFolders = RecentFoldersManager.shared.recentFolders
 
         // Then
-        // The folder should persist
-        XCTAssertTrue(newManager.recentFolders.contains(folder))
+        // The folder should persist - check count and path
+        XCTAssertEqual(persistedFolders.count, 1)
+        XCTAssertEqual(persistedFolders.first?.path, folder.path)
     }
 }

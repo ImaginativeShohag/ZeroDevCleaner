@@ -9,14 +9,20 @@ import Foundation
 import SwiftUI
 
 /// Manages recently scanned folders with UserDefaults persistence
-@Observable
 @MainActor
+@Observable
 final class RecentFoldersManager: Sendable {
+    /// Shared singleton instance
+    static let shared = RecentFoldersManager()
+
     /// Maximum number of recent folders to keep
     private static let maxRecentFolders = 5
 
     /// UserDefaults key for storing recent folders
-    private static let recentFoldersKey = "recentFolders"
+    private static let recentFoldersKey = "recent_folders"
+
+    /// Private initializer to enforce singleton pattern
+    private init() {}
 
     /// Recent folders list (up to 5 most recent)
     var recentFolders: [URL] {
@@ -33,11 +39,18 @@ final class RecentFoldersManager: Sendable {
             }
         }
         set {
-            // Keep only first 5 unique items
-            let unique = Array(Set(newValue)).prefix(Self.maxRecentFolders)
+            // Keep only first 5 unique items, preserving order
+            let unique = newValue.reduce(into: [URL]()) { result, url in
+                if !result.contains(url) {
+                    result.append(url)
+                }
+            }
+
+            // Limit to max recent folders
+            let limited = Array(unique.prefix(Self.maxRecentFolders))
 
             // Save to UserDefaults
-            if let data = try? JSONEncoder().encode(Array(unique)) {
+            if let data = try? JSONEncoder().encode(limited) {
                 UserDefaults.standard.set(data, forKey: Self.recentFoldersKey)
             }
         }
