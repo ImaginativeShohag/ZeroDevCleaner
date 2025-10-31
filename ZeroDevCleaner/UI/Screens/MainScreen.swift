@@ -1,5 +1,5 @@
 //
-//  MainView.swift
+//  MainScreen.swift
 //  ZeroDevCleaner
 //
 //  Created by Md. Mahmudul Hasan Shohag on 29/10/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct MainView: View {
+struct MainScreen: View {
     @State private var viewModel = MainViewModel()
     @State private var locationManager = ScanLocationManager()
     @State private var showingSettings = false
@@ -140,7 +140,7 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView(locationManager: locationManager)
+            SettingsSheet(locationManager: locationManager)
         }
         .sheet(isPresented: $showingAbout) {
             AboutSheet()
@@ -178,5 +178,5 @@ struct MainView: View {
 }
 
 #Preview {
-    MainView()
+    MainScreen()
 }

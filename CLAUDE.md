@@ -37,12 +37,12 @@ Follow these naming conventions for SwiftUI components:
 ZeroDevCleaner/
 ├── Models/              # Data models (BuildFolder, StaticLocation, etc.)
 ├── Services/            # Business logic (FileScanner, FileDeleter, StaticLocationScanner)
-├── ViewModels/          # State management (@Observable ViewModels)
-├── Views/              # SwiftUI views organized by feature
-│   ├── Components/     # Reusable UI components
-│   ├── Screens/        # Top-level screen views
-│   └── Sheets/         # Modal sheets
-└── Utils/              # Utilities and extensions
+├── ViewModels/          # State management (@Observable ViewModels), Shared ViewModels
+├── UI/                  # SwiftUI views organized by feature
+│   ├── Components/      # Reusable UI components
+│   ├── Screens/         # Top-level screen views with their ViewModels
+│   └── Sheets/          # Modal sheets
+└── Utils/               # Utilities and extensions
 ```
 
 ## Development Best Practices
@@ -102,6 +102,7 @@ Examples:
 - Always update this CLAUDE.md file after significant commits
 - Ask for clarification if requirements are ambiguous
 - Maintain clean git history with descriptive commit messages
+- The ViewModel related to a Screen will be at the same directory
 
 ## Project State
 
@@ -154,13 +155,3 @@ When working on this project:
 8. **Use descriptive names** for variables, methods, and types
 9. **Document complex logic** with inline comments
 10. **Run tests** before committing to ensure nothing breaks
-
-## Future Enhancements (Optional)
-
-These features are not critical but could be added:
-- Advanced scan options and exclusions
-- Scheduled automatic scans
-- CSV export for scan results
-- Scan comparison over time
-- Code signing and notarization
-- App Store distribution

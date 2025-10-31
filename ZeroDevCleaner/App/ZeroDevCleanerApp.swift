@@ -23,7 +23,7 @@ struct ZeroDevCleanerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
+            MainScreen()
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

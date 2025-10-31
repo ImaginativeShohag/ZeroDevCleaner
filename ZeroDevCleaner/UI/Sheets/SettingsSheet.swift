@@ -1,5 +1,5 @@
 //
-//  SettingsView.swift
+//  SettingsSheet.swift
 //  ZeroDevCleaner
 //
 //  Created by Md. Mahmudul Hasan Shohag on 30/10/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SettingsView: View {
+struct SettingsSheet: View {
     @Bindable var locationManager: ScanLocationManager
     @State private var showingFolderPicker = false
     @State private var isDropTargeted = false
@@ -197,5 +197,5 @@ struct LocationRow: View {
             lastScanned: nil
         )
     ]
-    return SettingsView(locationManager: manager)
+    return SettingsSheet(locationManager: manager)
 }
