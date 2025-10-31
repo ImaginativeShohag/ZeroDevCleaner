@@ -396,6 +396,46 @@
 
 **Commit**: `e40374d` - refactor: improve home screen layout with vertical statistics design
 
+### Recent Folders Manager Singleton Refactor ✅ COMPLETE!
+**Goal**: Fix test failures and refactor RecentFoldersManager to singleton pattern
+
+**Completed Features:**
+- ✅ **Singleton Pattern Implementation** - Single shared instance for managing recent folders
+  - Added `static let shared = RecentFoldersManager()`
+  - Private initializer to enforce singleton pattern
+  - Ensures single source of truth for UserDefaults persistence
+
+- ✅ **Fixed Order Preservation Bug** - Array deduplication now maintains insertion order
+  - Replaced `Array(Set(newValue))` with `reduce(into:)` approach
+  - Set-based deduplication was losing order due to unordered nature of Sets
+  - Now properly maintains most-recent-first ordering
+
+- ✅ **Fixed Actor Isolation Issues** - Test compilation errors resolved
+  - Removed `@MainActor` attributes from `setUp()` and `tearDown()` methods
+  - Class-level `@MainActor` annotation is sufficient
+  - Resolves "different actor isolation from nonisolated overridden declaration" errors
+
+- ✅ **Updated Test Suite** - All tests updated to use singleton pattern
+  - Changed test instance to computed property accessing `.shared`
+  - Removed manual instance creation from tests
+  - All 6 tests now passing including persistence test
+
+**Technical Implementation:**
+- ✅ Single shared instance accessed via `RecentFoldersManager.shared`
+- ✅ Order-preserving deduplication algorithm
+- ✅ Thread-safe with `@MainActor` isolation
+- ✅ Proper test isolation with UserDefaults cleanup
+
+**Test Results:**
+- ✅ `test_addFolder_addsToRecentList` - passed
+- ✅ `test_addFolder_movesExistingFolderToTop` - passed (originally failing)
+- ✅ `test_addFolder_limitsToFiveEntries` - passed
+- ✅ `test_addFolder_removesNonExistentPaths` - passed
+- ✅ `test_clearAll_removesAllFolders` - passed
+- ✅ `test_recentFolders_persistsAcrossInstances` - passed (now working with singleton)
+
+**Commit**: `f96f204` - refactor: convert RecentFoldersManager to singleton pattern
+
 ### Advanced Features (10-20 hours)
 **Nice to have features:**
 
@@ -443,8 +483,9 @@
 **Feature 9**: Statistics Dashboard with SwiftData & Swift Charts ✅
 **Feature 10**: Statistics on Home Screen & Done Button ✅
 **Feature 11**: Improved Home Screen Layout with Vertical Statistics ✅
+**Feature 12**: Recent Folders Manager Singleton Refactor ✅
 
-**Total Commits**: 48
+**Total Commits**: 49
 **Total Tests**: 60+ passing
 **Build Status**: Clean, no warnings
 **Project Types Supported**: 7
