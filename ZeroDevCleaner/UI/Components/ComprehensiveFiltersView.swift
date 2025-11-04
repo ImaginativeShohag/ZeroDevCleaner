@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct ComprehensiveFiltersView: View {
-    @Bindable var viewModel: MainViewModel
+    @Binding var sizeFilterValue: Int64?
+    @Binding var sizeFilterOperator: MainViewModel.ComparisonOperator
+    @Binding var daysOldFilterValue: Int?
+    @Binding var daysOldFilterOperator: MainViewModel.ComparisonOperator
+    let onClear: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
@@ -20,9 +24,9 @@ struct ComprehensiveFiltersView: View {
 
                 // Size value picker
                 Picker("Size Value", selection: Binding(
-                    get: { viewModel.sizeFilterValue ?? -1 },
+                    get: { sizeFilterValue ?? -1 },
                     set: { newValue in
-                        viewModel.sizeFilterValue = newValue == -1 ? nil : newValue
+                        sizeFilterValue = newValue == -1 ? nil : newValue
                     }
                 )) {
                     Text("Any").tag(Int64(-1))
@@ -39,7 +43,7 @@ struct ComprehensiveFiltersView: View {
                 .frame(width: 100)
 
                 // Size condition picker
-                Picker("Size Operator", selection: $viewModel.sizeFilterOperator) {
+                Picker("Size Operator", selection: $sizeFilterOperator) {
                     ForEach(MainViewModel.ComparisonOperator.allCases, id: \.self) { op in
                         Text(op.displayName).tag(op)
                     }
@@ -47,7 +51,7 @@ struct ComprehensiveFiltersView: View {
                 .pickerStyle(.menu)
                 .labelsHidden()
                 .frame(width: 60)
-                .disabled(viewModel.sizeFilterValue == nil)
+                .disabled(sizeFilterValue == nil)
             }
 
             Divider()
@@ -61,9 +65,9 @@ struct ComprehensiveFiltersView: View {
 
                 // Days value picker
                 Picker("Days Value", selection: Binding(
-                    get: { viewModel.daysOldFilterValue ?? -1 },
+                    get: { daysOldFilterValue ?? -1 },
                     set: { newValue in
-                        viewModel.daysOldFilterValue = newValue == -1 ? nil : newValue
+                        daysOldFilterValue = newValue == -1 ? nil : newValue
                     }
                 )) {
                     Text("Any").tag(-1)
@@ -81,7 +85,7 @@ struct ComprehensiveFiltersView: View {
                 .frame(width: 100)
 
                 // Days condition picker
-                Picker("Days Operator", selection: $viewModel.daysOldFilterOperator) {
+                Picker("Days Operator", selection: $daysOldFilterOperator) {
                     ForEach(MainViewModel.ComparisonOperator.allCases, id: \.self) { op in
                         Text(op.displayName).tag(op)
                     }
@@ -89,16 +93,15 @@ struct ComprehensiveFiltersView: View {
                 .pickerStyle(.menu)
                 .labelsHidden()
                 .frame(width: 60)
-                .disabled(viewModel.daysOldFilterValue == nil)
+                .disabled(daysOldFilterValue == nil)
             }
 
             Spacer()
 
             // Clear button
-            if viewModel.sizeFilterValue != nil || viewModel.daysOldFilterValue != nil {
+            if sizeFilterValue != nil || daysOldFilterValue != nil {
                 Button {
-                    viewModel.sizeFilterValue = nil
-                    viewModel.daysOldFilterValue = nil
+                    onClear()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "xmark.circle.fill")
@@ -117,6 +120,20 @@ struct ComprehensiveFiltersView: View {
 }
 
 #Preview {
-    ComprehensiveFiltersView(viewModel: MainViewModel())
-        .frame(width: 700)
+    @Previewable @State var sizeValue: Int64? = nil
+    @Previewable @State var sizeOp: MainViewModel.ComparisonOperator = .greaterThanOrEqual
+    @Previewable @State var daysValue: Int? = nil
+    @Previewable @State var daysOp: MainViewModel.ComparisonOperator = .greaterThanOrEqual
+
+    ComprehensiveFiltersView(
+        sizeFilterValue: $sizeValue,
+        sizeFilterOperator: $sizeOp,
+        daysOldFilterValue: $daysValue,
+        daysOldFilterOperator: $daysOp,
+        onClear: {
+            sizeValue = nil
+            daysValue = nil
+        }
+    )
+    .frame(width: 700)
 }

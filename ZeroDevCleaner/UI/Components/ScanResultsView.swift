@@ -194,17 +194,30 @@ struct ScanResultsView: View {
             .padding(.vertical, 8)
 
             // Quick Filters
-            QuickFiltersBar(currentPreset: $viewModel.currentPreset, showComprehensiveFilters: $viewModel.showComprehensiveFilters, viewModel: viewModel)
+            QuickFiltersBar(
+                currentPreset: $viewModel.currentPreset,
+                showComprehensiveFilters: $viewModel.showComprehensiveFilters,
+                hasActiveFilters: viewModel.sizeFilterValue != nil || viewModel.daysOldFilterValue != nil
+            )
 
             // Comprehensive Filters
             if viewModel.showComprehensiveFilters {
-                ComprehensiveFiltersView(viewModel: viewModel)
-                    .padding(.top, 8)
-                    .padding([.horizontal, .bottom])
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
-                    ))
+                ComprehensiveFiltersView(
+                    sizeFilterValue: $viewModel.sizeFilterValue,
+                    sizeFilterOperator: $viewModel.sizeFilterOperator,
+                    daysOldFilterValue: $viewModel.daysOldFilterValue,
+                    daysOldFilterOperator: $viewModel.daysOldFilterOperator,
+                    onClear: {
+                        viewModel.sizeFilterValue = nil
+                        viewModel.daysOldFilterValue = nil
+                    }
+                )
+                .padding(.top, 8)
+                .padding([.horizontal, .bottom])
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
+                ))
             }
 
             Divider()
@@ -419,16 +432,29 @@ struct ScanResultsView: View {
             .padding(.vertical, 8)
 
             // Quick Filters
-            QuickFiltersBar(currentPreset: $viewModel.currentPreset, showComprehensiveFilters: $viewModel.showComprehensiveFilters, viewModel: viewModel)
+            QuickFiltersBar(
+                currentPreset: $viewModel.currentPreset,
+                showComprehensiveFilters: $viewModel.showComprehensiveFilters,
+                hasActiveFilters: viewModel.sizeFilterValue != nil || viewModel.daysOldFilterValue != nil
+            )
 
             // Comprehensive Filters
             if viewModel.showComprehensiveFilters {
-                ComprehensiveFiltersView(viewModel: viewModel)
-                    .padding()
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
-                    ))
+                ComprehensiveFiltersView(
+                    sizeFilterValue: $viewModel.sizeFilterValue,
+                    sizeFilterOperator: $viewModel.sizeFilterOperator,
+                    daysOldFilterValue: $viewModel.daysOldFilterValue,
+                    daysOldFilterOperator: $viewModel.daysOldFilterOperator,
+                    onClear: {
+                        viewModel.sizeFilterValue = nil
+                        viewModel.daysOldFilterValue = nil
+                    }
+                )
+                .padding()
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
+                ))
             }
 
             Divider()

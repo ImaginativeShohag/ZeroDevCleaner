@@ -10,7 +10,7 @@ import SwiftUI
 struct QuickFiltersBar: View {
     @Binding var currentPreset: FilterPreset
     @Binding var showComprehensiveFilters: Bool
-    var viewModel: MainViewModel
+    var hasActiveFilters: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -70,7 +70,7 @@ struct QuickFiltersBar: View {
                         )
 
                         // Red indicator when filters are active
-                        if viewModel.sizeFilterValue != nil || viewModel.daysOldFilterValue != nil {
+                        if hasActiveFilters {
                             Circle()
                                 .fill(Color.red)
                                 .frame(width: 8, height: 8)
@@ -93,8 +93,7 @@ struct QuickFiltersBar: View {
 #Preview("All Selected") {
     @Previewable @State var currentPreset: FilterPreset = .all
     @Previewable @State var showComprehensive: Bool = false
-    @Previewable @State var viewModel = MainViewModel()
-    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, hasActiveFilters: false)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }
@@ -102,8 +101,7 @@ struct QuickFiltersBar: View {
 #Preview("Large Selected") {
     @Previewable @State var currentPreset: FilterPreset = .large
     @Previewable @State var showComprehensive: Bool = false
-    @Previewable @State var viewModel = MainViewModel()
-    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, hasActiveFilters: false)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }
@@ -111,8 +109,7 @@ struct QuickFiltersBar: View {
 #Preview("Old Selected") {
     @Previewable @State var currentPreset: FilterPreset = .old
     @Previewable @State var showComprehensive: Bool = false
-    @Previewable @State var viewModel = MainViewModel()
-    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, hasActiveFilters: true)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }
