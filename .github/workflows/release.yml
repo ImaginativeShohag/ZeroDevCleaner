@@ -1,0 +1,86 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  build:
+    name: Build macOS App
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build app
+        run: |
+          xcodebuild clean build \
+            -project ZeroDevCleaner.xcodeproj \
+            -scheme ZeroDevCleaner \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Locate built app
+        id: locate
+        run: |
+          APP_PATH=$(find ./build -name "ZeroDevCleaner.app" -type d | head -1)
+          echo "app_path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "Found app at: $APP_PATH"
+
+          # Get version from Info.plist
+          VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "0.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Install DMG creation tools
+        run: |
+          # Verify Homebrew is available (pre-installed on GitHub Actions macOS runners)
+          which brew || (echo "Homebrew not found" && exit 1)
+
+          # Install create-dmg via npm
+          npm install --global create-dmg
+
+          # Install image processing tools via Homebrew
+          brew install graphicsmagick imagemagick
+
+      - name: Create DMG
+        id: create_dmg
+        run: |
+          VERSION=${{ steps.locate.outputs.version }}
+          ./scripts/create-dmg.sh "${{ steps.locate.outputs.app_path }}" "$VERSION"
+          echo "dmg_file=ZeroDevCleaner-v${VERSION}.dmg" >> $GITHUB_OUTPUT
+
+      - name: Upload DMG to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ steps.create_dmg.outputs.dmg_file }}
+          asset_name: ${{ steps.create_dmg.outputs.dmg_file }}
+          asset_content_type: application/x-apple-diskimage
+
+      - name: Upload DMG as Artifact (for manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroDevCleaner-DMG
+          path: ./${{ steps.create_dmg.outputs.dmg_file }}
+          retention-days: 7
