@@ -104,6 +104,8 @@ Examples:
 - Ask for clarification if requirements are ambiguous
 - Maintain clean git history with descriptive commit messages
 - The ViewModel related to a Screen will be at the same directory
+- Initialize ViewModel only in a Screen or Sheet view.
+- Don't pass any viewmodel to any sub view. Sub view refers to non Screen or Sheet views.
 
 ## Project State
 
