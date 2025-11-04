@@ -16,6 +16,7 @@ final class ImportSettingsViewModel {
     var isImporting = false
     var errorMessage: String?
     var loadedExport: SettingsExport?
+    var showSuccessAlert = false
 
     private let importer: SettingsImporterProtocol
 
@@ -87,7 +88,7 @@ final class ImportSettingsViewModel {
         isLoading = false
     }
 
-    func performImport(onSuccess: @escaping () -> Void) async {
+    func performImport() async {
         guard let export = loadedExport else { return }
 
         isImporting = true
@@ -96,7 +97,7 @@ final class ImportSettingsViewModel {
         await importer.applySettings(export, mode: importMode)
 
         isImporting = false
-        onSuccess()
+        showSuccessAlert = true
     }
 }
 
@@ -160,36 +161,95 @@ struct ImportSettingsSheet: View {
 
                 // Preview
                 if let export = viewModel.loadedExport {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Contents")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Preview")
+                            .font(.headline)
 
-                        if !export.scanLocations.isEmpty {
-                            HStack {
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(.blue)
-                                    .font(.caption)
-                                Text("\(export.scanLocations.count) scan location\(export.scanLocations.count == 1 ? "" : "s")")
-                                    .font(.subheadline)
-                            }
-                        }
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                // Scan Locations
+                                if !export.scanLocations.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "folder.fill")
+                                                .foregroundStyle(.blue)
+                                                .font(.caption)
+                                            Text("Scan Locations (\(export.scanLocations.count))")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                        }
 
-                        if !export.customCacheLocations.isEmpty {
-                            HStack {
-                                Image(systemName: "folder.badge.gearshape")
-                                    .foregroundStyle(.orange)
-                                    .font(.caption)
-                                Text("\(export.customCacheLocations.count) custom cache\(export.customCacheLocations.count == 1 ? "" : "s")")
-                                    .font(.subheadline)
+                                        ForEach(export.scanLocations) { location in
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "circle.fill")
+                                                    .font(.system(size: 4))
+                                                    .foregroundStyle(.secondary)
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(location.name)
+                                                        .font(.caption)
+                                                    Text(location.path.path)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                            .padding(.leading, 8)
+                                        }
+                                    }
+                                }
+
+                                // Custom Caches
+                                if !export.customCacheLocations.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "folder.badge.gearshape")
+                                                .foregroundStyle(.orange)
+                                                .font(.caption)
+                                            Text("Custom Cache Locations (\(export.customCacheLocations.count))")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                        }
+
+                                        ForEach(export.customCacheLocations) { cache in
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "circle.fill")
+                                                    .font(.system(size: 4))
+                                                    .foregroundStyle(.secondary)
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(cache.name)
+                                                        .font(.caption)
+                                                    Text(cache.path.path)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                    if let pattern = cache.pattern, !pattern.isEmpty {
+                                                        Text("Pattern: \(pattern)")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.secondary)
+                                                    }
+                                                }
+                                            }
+                                            .padding(.leading, 8)
+                                        }
+                                    }
+                                }
+
+                                // Empty state
+                                if export.scanLocations.isEmpty && export.customCacheLocations.isEmpty {
+                                    HStack {
+                                        Image(systemName: "info.circle.fill")
+                                            .foregroundStyle(.blue)
+                                        Text("No items to import")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                             }
+                            .padding(12)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxHeight: 200)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(8)
                     }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.secondary.opacity(0.05))
-                    .cornerRadius(8)
                 }
             }
 
@@ -254,9 +314,7 @@ struct ImportSettingsSheet: View {
 
                 Button("Import") {
                     Task {
-                        await viewModel.performImport {
-                            dismiss()
-                        }
+                        await viewModel.performImport()
                     }
                 }
                 .disabled(!viewModel.canImport)
@@ -267,6 +325,13 @@ struct ImportSettingsSheet: View {
         }
         .padding(20)
         .frame(width: 550)
+        .alert("Import Successful", isPresented: $viewModel.showSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your settings have been imported successfully.")
+        }
     }
 }
 

@@ -15,6 +15,7 @@ final class ExportSettingsViewModel {
     var includeCustomCaches = true
     var isExporting = false
     var errorMessage: String?
+    var showSuccessAlert = false
 
     private let exporter: SettingsExporterProtocol
 
@@ -59,12 +60,18 @@ final class ExportSettingsViewModel {
             return
         }
 
+        // Generate filename with datetime
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_hh-mm-ss-a"
+        let dateString = dateFormatter.string(from: Date())
+        let filename = "ZeroDevCleaner-Settings_\(dateString)"
+
         // Open save panel
         let panel = NSSavePanel()
         panel.title = "Export Settings"
         panel.message = "Choose where to save your settings"
         panel.nameFieldLabel = "Save as:"
-        panel.nameFieldStringValue = "ZeroDevCleaner-Settings.zdcsettings"
+        panel.nameFieldStringValue = filename
         panel.allowedContentTypes = [.init(filenameExtension: "zdcsettings")!]
         panel.canCreateDirectories = true
 
@@ -84,6 +91,7 @@ final class ExportSettingsViewModel {
 
         do {
             try await exporter.exportSettings(to: url, options: exportOptions)
+            showSuccessAlert = true
         } catch let error as ZeroDevCleanerError {
             errorMessage = error.localizedDescription
         } catch {
@@ -123,10 +131,19 @@ struct ExportSettingsSheet: View {
 
             // Options
             VStack(spacing: 16) {
-                Toggle(isOn: $viewModel.includeScanLocations) {
-                    HStack {
+                // Scan Locations
+                Button(action: {
+                    viewModel.includeScanLocations.toggle()
+                }) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: viewModel.includeScanLocations ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 18))
+                            .foregroundStyle(viewModel.includeScanLocations ? .blue : .secondary)
+
                         Image(systemName: "folder.fill")
                             .foregroundStyle(.blue)
+                            .frame(width: 20, height: 20)
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Scan Locations")
                                 .font(.headline)
@@ -134,15 +151,28 @@ struct ExportSettingsSheet: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .toggleStyle(.checkbox)
 
-                Toggle(isOn: $viewModel.includeCustomCaches) {
-                    HStack {
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .background(Color.secondary.opacity(0.05))
+                .cornerRadius(6)
+
+                // Custom Cache Locations
+                Button(action: {
+                    viewModel.includeCustomCaches.toggle()
+                }) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: viewModel.includeCustomCaches ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 18))
+                            .foregroundStyle(viewModel.includeCustomCaches ? .blue : .secondary)
+
                         Image(systemName: "folder.badge.gearshape")
                             .foregroundStyle(.orange)
+                            .frame(width: 20, height: 20)
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Custom Cache Locations")
                                 .font(.headline)
@@ -150,28 +180,120 @@ struct ExportSettingsSheet: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .toggleStyle(.checkbox)
+                .buttonStyle(.plain)
+                .padding(8)
+                .background(Color.secondary.opacity(0.05))
+                .cornerRadius(6)
             }
 
             // Preview
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Summary")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Preview")
                     .font(.headline)
 
-                HStack {
-                    Image(systemName: viewModel.hasAtLeastOneOption ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(viewModel.hasAtLeastOneOption ? .green : .orange)
-                    Text(viewModel.previewText)
-                        .font(.subheadline)
-                        .foregroundStyle(viewModel.hasAtLeastOneOption ? .primary : .secondary)
+                if !viewModel.hasAtLeastOneOption {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Please select at least one option to export")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Scan Locations
+                            if viewModel.includeScanLocations, let locations = Preferences.scanLocations, !locations.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "folder.fill")
+                                            .foregroundStyle(.blue)
+                                            .font(.caption)
+                                        Text("Scan Locations (\(locations.count))")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+
+                                    ForEach(locations) { location in
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "circle.fill")
+                                                .font(.system(size: 4))
+                                                .foregroundStyle(.secondary)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(location.name)
+                                                    .font(.caption)
+                                                Text(location.path.path)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .padding(.leading, 8)
+                                    }
+                                }
+                            }
+
+                            // Custom Caches
+                            if viewModel.includeCustomCaches, let caches = Preferences.customCacheLocations, !caches.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "folder.badge.gearshape")
+                                            .foregroundStyle(.orange)
+                                            .font(.caption)
+                                        Text("Custom Cache Locations (\(caches.count))")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+
+                                    ForEach(caches) { cache in
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "circle.fill")
+                                                .font(.system(size: 4))
+                                                .foregroundStyle(.secondary)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(cache.name)
+                                                    .font(.caption)
+                                                Text(cache.path.path)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                if let pattern = cache.pattern, !pattern.isEmpty {
+                                                    Text("Pattern: \(pattern)")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                        }
+                                        .padding(.leading, 8)
+                                    }
+                                }
+                            }
+
+                            // Empty state
+                            if (viewModel.includeScanLocations && (Preferences.scanLocations?.isEmpty ?? true)) ||
+                               (viewModel.includeCustomCaches && (Preferences.customCacheLocations?.isEmpty ?? true)) {
+                                HStack {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundStyle(.blue)
+                                    Text("No items to export")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(12)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxHeight: 200)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(8)
             }
 
             // Error message
@@ -214,6 +336,13 @@ struct ExportSettingsSheet: View {
         }
         .padding(20)
         .frame(width: 500)
+        .alert("Export Successful", isPresented: $viewModel.showSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your settings have been exported successfully.")
+        }
     }
 }
 
