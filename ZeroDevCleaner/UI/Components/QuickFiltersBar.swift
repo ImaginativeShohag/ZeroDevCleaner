@@ -9,6 +9,8 @@ import SwiftUI
 
 struct QuickFiltersBar: View {
     @Binding var currentPreset: FilterPreset
+    @Binding var showComprehensiveFilters: Bool
+    var viewModel: MainViewModel
 
     var body: some View {
         HStack(spacing: 8) {
@@ -41,6 +43,44 @@ struct QuickFiltersBar: View {
                     .buttonHoverEffect()
                     .help(preset.description)
                 }
+
+                // Custom button
+                Button {
+                    showComprehensiveFilters.toggle()
+                    // Deselect quick filters when Custom is enabled
+                    if showComprehensiveFilters {
+                        currentPreset = .all
+                    }
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        HStack(spacing: 4) {
+                            Image(systemName: showComprehensiveFilters ? "slider.horizontal.3" : "slider.horizontal.2.square")
+                                .font(.system(size: 11))
+                            Text("Custom")
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(showComprehensiveFilters ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
+                        .foregroundStyle(showComprehensiveFilters ? Color.white : Color.primary)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(showComprehensiveFilters ? Color.clear : Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        )
+
+                        // Red indicator when filters are active
+                        if viewModel.sizeFilterValue != nil || viewModel.daysOldFilterValue != nil {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 2, y: 0)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .buttonHoverEffect()
+                .help("Show/hide custom size and age filters")
             }
 
             Spacer()
@@ -52,21 +92,27 @@ struct QuickFiltersBar: View {
 
 #Preview("All Selected") {
     @Previewable @State var currentPreset: FilterPreset = .all
-    QuickFiltersBar(currentPreset: $currentPreset)
+    @Previewable @State var showComprehensive: Bool = false
+    @Previewable @State var viewModel = MainViewModel()
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }
 
 #Preview("Large Selected") {
     @Previewable @State var currentPreset: FilterPreset = .large
-    QuickFiltersBar(currentPreset: $currentPreset)
+    @Previewable @State var showComprehensive: Bool = false
+    @Previewable @State var viewModel = MainViewModel()
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }
 
 #Preview("Old Selected") {
     @Previewable @State var currentPreset: FilterPreset = .old
-    QuickFiltersBar(currentPreset: $currentPreset)
+    @Previewable @State var showComprehensive: Bool = false
+    @Previewable @State var viewModel = MainViewModel()
+    QuickFiltersBar(currentPreset: $currentPreset, showComprehensiveFilters: $showComprehensive, viewModel: viewModel)
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800)
 }

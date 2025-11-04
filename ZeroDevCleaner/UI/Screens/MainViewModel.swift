@@ -96,6 +96,57 @@ final class MainViewModel {
         didSet { invalidateFilterCache() }
     }
 
+    /// Comparison operators for filters
+    enum ComparisonOperator: String, CaseIterable, Sendable {
+        case equal = "="
+        case lessThan = "<"
+        case lessThanOrEqual = "<="
+        case greaterThan = ">"
+        case greaterThanOrEqual = ">="
+
+        var displayName: String {
+            rawValue
+        }
+
+        func compare<T: Comparable>(_ lhs: T, _ rhs: T) -> Bool {
+            switch self {
+            case .equal:
+                return lhs == rhs
+            case .lessThan:
+                return lhs < rhs
+            case .lessThanOrEqual:
+                return lhs <= rhs
+            case .greaterThan:
+                return lhs > rhs
+            case .greaterThanOrEqual:
+                return lhs >= rhs
+            }
+        }
+    }
+
+    /// Comprehensive filter: size value in bytes (nil = no filter)
+    var sizeFilterValue: Int64? = nil {
+        didSet { invalidateFilterCache() }
+    }
+
+    /// Comprehensive filter: size comparison operator
+    var sizeFilterOperator: ComparisonOperator = .greaterThanOrEqual {
+        didSet { invalidateFilterCache() }
+    }
+
+    /// Comprehensive filter: days old value (nil = no filter)
+    var daysOldFilterValue: Int? = nil {
+        didSet { invalidateFilterCache() }
+    }
+
+    /// Comprehensive filter: days old comparison operator
+    var daysOldFilterOperator: ComparisonOperator = .greaterThanOrEqual {
+        didSet { invalidateFilterCache() }
+    }
+
+    /// Whether to show comprehensive filters
+    var showComprehensiveFilters: Bool = false
+
     /// Current sort column
     var sortColumn: SortColumn = .size {
         didSet { invalidateSortCache() }
@@ -170,6 +221,21 @@ final class MainViewModel {
         // Then apply preset filter
         if currentPreset != .all {
             results = results.filter { currentPreset.matches($0) }
+        }
+
+        // Apply comprehensive size filter
+        if let sizeValue = sizeFilterValue {
+            results = results.filter { folder in
+                sizeFilterOperator.compare(folder.size, sizeValue)
+            }
+        }
+
+        // Apply comprehensive days old filter
+        if let daysValue = daysOldFilterValue {
+            results = results.filter { folder in
+                let daysSinceModified = Calendar.current.dateComponents([.day], from: folder.lastModified, to: Date()).day ?? 0
+                return daysOldFilterOperator.compare(daysSinceModified, daysValue)
+            }
         }
 
         // Cache and return
@@ -258,10 +324,40 @@ final class MainViewModel {
 
     /// Filtered static locations based on current preset
     var filteredStaticLocations: [StaticLocation] {
+        var results: [StaticLocation]
+
         if currentPreset == .all {
-            return staticLocations
+            results = staticLocations
+        } else {
+            results = staticLocations.filter { currentPreset.matches($0) }
         }
-        return staticLocations.filter { currentPreset.matches($0) }
+
+        // Apply comprehensive size filter
+        if let sizeValue = sizeFilterValue {
+            results = results.filter { location in
+                sizeFilterOperator.compare(location.size, sizeValue)
+            }
+        }
+
+        // Apply comprehensive days old filter
+        if let daysValue = daysOldFilterValue {
+            results = results.filter { location in
+                let daysSinceModified = Calendar.current.dateComponents([.day], from: location.lastModified, to: Date()).day ?? 0
+                return daysOldFilterOperator.compare(daysSinceModified, daysValue)
+            }
+        }
+
+        // Sort: existing items first, then empty items at the bottom
+        return results.sorted { lhs, rhs in
+            if lhs.exists && !rhs.exists {
+                return true // existing comes before empty
+            } else if !lhs.exists && rhs.exists {
+                return false // empty comes after existing
+            } else {
+                // Both have same exists status, maintain original order by comparing sizes
+                return lhs.size > rhs.size
+            }
+        }
     }
 
     /// Whether to include static locations in results
@@ -687,6 +783,49 @@ final class MainViewModel {
     /// Total number of folders found
     var totalFoldersCount: Int {
         scanResults.count
+    }
+
+    /// Get count for a specific filter type
+    func count(for filter: FilterType) -> Int {
+        if filter == .all {
+            return scanResults.count
+        }
+
+        return scanResults.filter { folder in
+            switch filter {
+            case .all:
+                return true
+            case .android:
+                return folder.projectType == .android
+            case .iOS:
+                return folder.projectType == .iOS
+            case .swiftPackage:
+                return folder.projectType == .swiftPackage
+            case .flutter:
+                return folder.projectType == .flutter
+            case .nodeJS:
+                return folder.projectType == .nodeJS
+            case .rust:
+                return folder.projectType == .rust
+            case .python:
+                return folder.projectType == .python
+            case .go:
+                return folder.projectType == .go
+            case .javaMaven:
+                return folder.projectType == .javaMaven
+            case .ruby:
+                return folder.projectType == .ruby
+            case .dotNet:
+                return folder.projectType == .dotNet
+            case .unity:
+                return folder.projectType == .unity
+            }
+        }.count
+    }
+
+    /// Filter types sorted by count (descending)
+    var sortedFilterTypes: [FilterType] {
+        return FilterType.allCases.sorted { count(for: $0) > count(for: $1) }
     }
 
     /// Total size of all folders

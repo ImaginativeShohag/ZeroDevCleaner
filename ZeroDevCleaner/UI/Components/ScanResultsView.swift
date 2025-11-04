@@ -12,7 +12,7 @@ struct ScanResultsView: View {
     let onShowInFinder: (BuildFolder) -> Void
     let onDone: () -> Void
     @State private var expandedStaticLocations: Set<UUID> = []
-    @State private var expandedSubItems: Set<UUID> = []  // For nested items like archive app groups
+    @State private var expandedSubItems: Set<UUID> = [] // For nested items like archive app groups
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,6 +80,7 @@ struct ScanResultsView: View {
     }
 
     // MARK: - Build Folders Tab
+
     private var buildFoldersView: some View {
         VStack(spacing: 0) {
             // Enhanced Summary Card
@@ -171,9 +172,13 @@ struct ScanResultsView: View {
                     .foregroundStyle(.secondary)
 
                 Picker("Filter Project", selection: $viewModel.currentFilter) {
-                    ForEach(MainViewModel.FilterType.allCases, id: \.self) { filter in
-                        Label(filter.rawValue, systemImage: filter.icon)
-                            .tag(filter)
+                    ForEach(viewModel.sortedFilterTypes, id: \.self) { filter in
+                        Label {
+                            Text("\(filter.rawValue) (\(viewModel.count(for: filter)))")
+                        } icon: {
+                            Image(systemName: filter.icon)
+                        }
+                        .tag(filter)
                     }
                 }
                 .pickerStyle(.menu)
@@ -189,7 +194,18 @@ struct ScanResultsView: View {
             .padding(.vertical, 8)
 
             // Quick Filters
-            QuickFiltersBar(currentPreset: $viewModel.currentPreset)
+            QuickFiltersBar(currentPreset: $viewModel.currentPreset, showComprehensiveFilters: $viewModel.showComprehensiveFilters, viewModel: viewModel)
+
+            // Comprehensive Filters
+            if viewModel.showComprehensiveFilters {
+                ComprehensiveFiltersView(viewModel: viewModel)
+                    .padding(.top, 8)
+                    .padding([.horizontal, .bottom])
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+                        removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
+                    ))
+            }
 
             Divider()
 
@@ -259,7 +275,8 @@ struct ScanResultsView: View {
             }
             .contextMenu(forSelectionType: BuildFolder.ID.self) { items in
                 if let itemId = items.first,
-                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId }) {
+                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId })
+                {
                     Button("Show in Finder") {
                         onShowInFinder(folder)
                     }
@@ -272,7 +289,8 @@ struct ScanResultsView: View {
             } primaryAction: { items in
                 // Double-click action
                 if let itemId = items.first,
-                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId }) {
+                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId })
+                {
                     onShowInFinder(folder)
                 }
             }
@@ -306,9 +324,11 @@ struct ScanResultsView: View {
             .padding(.horizontal)
             .padding(.vertical, 8)
         }
+        .animation(.default, value: viewModel.showComprehensiveFilters)
     }
 
     // MARK: - System Caches Tab
+
     private var systemCachesView: some View {
         VStack(spacing: 0) {
             // Summary Card
@@ -399,7 +419,17 @@ struct ScanResultsView: View {
             .padding(.vertical, 8)
 
             // Quick Filters
-            QuickFiltersBar(currentPreset: $viewModel.currentPreset)
+            QuickFiltersBar(currentPreset: $viewModel.currentPreset, showComprehensiveFilters: $viewModel.showComprehensiveFilters, viewModel: viewModel)
+
+            // Comprehensive Filters
+            if viewModel.showComprehensiveFilters {
+                ComprehensiveFiltersView(viewModel: viewModel)
+                    .padding()
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+                        removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
+                    ))
+            }
 
             Divider()
 
@@ -584,7 +614,7 @@ struct ScanResultsView: View {
                                                             ForEach(subItem.subItems) { versionItem in
                                                                 HStack(spacing: 12) {
                                                                     Spacer()
-                                                                        .frame(width: 52)  // Extra indent for nested items
+                                                                        .frame(width: 52) // Extra indent for nested items
 
                                                                     Button {
                                                                         viewModel.toggleNestedSubItemSelection(for: location, subItemId: subItem.id, nestedItemId: versionItem.id)
@@ -756,6 +786,7 @@ struct ScanResultsView: View {
                 }
             }
         }
+        .animation(.default, value: viewModel.showComprehensiveFilters)
     }
 
     // MARK: - Helper Properties & Methods
@@ -839,7 +870,7 @@ struct ScanResultsView: View {
         if location.isSelected {
             return "checkmark.square.fill"
         } else if location.someSubItemsSelected {
-            return "minus.square.fill"  // Partial selection
+            return "minus.square.fill" // Partial selection
         } else {
             return "square"
         }
@@ -850,7 +881,7 @@ struct ScanResultsView: View {
         if subItem.isSelected {
             return "checkmark.square.fill"
         } else if subItem.someSubItemsSelected {
-            return "minus.square.fill"  // Partial selection
+            return "minus.square.fill" // Partial selection
         } else {
             return "square"
         }
