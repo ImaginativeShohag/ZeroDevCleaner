@@ -16,7 +16,7 @@ struct ZeroDevCleanerApp: App {
     init() {
         do {
             // Use in-memory store for previews to avoid initialization issues
-            let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+            let isPreview = ProcessInfo.processInfo.isSwiftUIPreview
 
             let schema = Schema([CleaningSession.self, CleanedItem.self])
             let configuration = ModelConfiguration(
