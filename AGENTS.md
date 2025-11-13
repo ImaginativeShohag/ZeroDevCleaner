@@ -154,6 +154,14 @@ Examples:
    - Keyboard shortcuts (⌘E to export, ⌘I to import)
    - Full test coverage with unit and integration tests
 
+**Phase 4 - Code Refactoring (November 2025):**
+13. **FilterManager** - Extracted filtering logic from MainViewModel into dedicated FilterManager:
+   - Separated FilterType and ComparisonOperator enums into FilterManager
+   - Delegated all filter-related properties and state management
+   - Improved code organization and maintainability
+   - Enhanced separation of concerns for better testability
+   - Maintained backward compatibility with existing filter API
+
 ### Key Features
 - Multi-location scanning with persistent settings
 - **Settings export/import** - Backup and restore scan locations and custom caches across devices
