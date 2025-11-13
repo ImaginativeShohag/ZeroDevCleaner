@@ -65,37 +65,58 @@ final class MainViewModel {
 
     var currentFilter: FilterType {
         get { filterManager.currentFilter }
-        set { filterManager.currentFilter = newValue }
+        set {
+            filterManager.currentFilter = newValue
+            invalidateSortCache()
+        }
     }
 
     var currentPreset: FilterPreset {
         get { filterManager.currentPreset }
-        set { filterManager.currentPreset = newValue }
+        set {
+            filterManager.currentPreset = newValue
+            invalidateSortCache()
+        }
     }
 
     var sizeFilterValue: Int64? {
         get { filterManager.sizeFilterValue }
-        set { filterManager.sizeFilterValue = newValue }
+        set {
+            filterManager.sizeFilterValue = newValue
+            invalidateSortCache()
+        }
     }
 
     var sizeFilterOperator: ComparisonOperator {
         get { filterManager.sizeFilterOperator }
-        set { filterManager.sizeFilterOperator = newValue }
+        set {
+            filterManager.sizeFilterOperator = newValue
+            invalidateSortCache()
+        }
     }
 
     var daysOldFilterValue: Int? {
         get { filterManager.daysOldFilterValue }
-        set { filterManager.daysOldFilterValue = newValue }
+        set {
+            filterManager.daysOldFilterValue = newValue
+            invalidateSortCache()
+        }
     }
 
     var daysOldFilterOperator: ComparisonOperator {
         get { filterManager.daysOldFilterOperator }
-        set { filterManager.daysOldFilterOperator = newValue }
+        set {
+            filterManager.daysOldFilterOperator = newValue
+            invalidateSortCache()
+        }
     }
 
     var showComprehensiveFilters: Bool {
         get { filterManager.showComprehensiveFilters }
-        set { filterManager.showComprehensiveFilters = newValue }
+        set {
+            filterManager.showComprehensiveFilters = newValue
+            // No need to invalidate cache for UI-only property
+        }
     }
 
     /// Current sort column

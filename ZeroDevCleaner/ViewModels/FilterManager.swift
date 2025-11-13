@@ -77,55 +77,30 @@ final class FilterManager {
     // MARK: - State Properties
 
     /// Current filter type
-    var currentFilter: FilterType = .all {
-        didSet { invalidateFilterCache() }
-    }
+    var currentFilter: FilterType = .all
 
     /// Current quick filter preset
-    var currentPreset: FilterPreset = .all {
-        didSet { invalidateFilterCache() }
-    }
+    var currentPreset: FilterPreset = .all
 
     /// Comprehensive filter: size value in bytes (nil = no filter)
-    var sizeFilterValue: Int64? = nil {
-        didSet { invalidateFilterCache() }
-    }
+    var sizeFilterValue: Int64? = nil
 
     /// Comprehensive filter: size comparison operator
-    var sizeFilterOperator: ComparisonOperator = .greaterThanOrEqual {
-        didSet { invalidateFilterCache() }
-    }
+    var sizeFilterOperator: ComparisonOperator = .greaterThanOrEqual
 
     /// Comprehensive filter: days old value (nil = no filter)
-    var daysOldFilterValue: Int? = nil {
-        didSet { invalidateFilterCache() }
-    }
+    var daysOldFilterValue: Int? = nil
 
     /// Comprehensive filter: days old comparison operator
-    var daysOldFilterOperator: ComparisonOperator = .greaterThanOrEqual {
-        didSet { invalidateFilterCache() }
-    }
+    var daysOldFilterOperator: ComparisonOperator = .greaterThanOrEqual
 
     /// Whether to show comprehensive filters
     var showComprehensiveFilters: Bool = false
-
-    // MARK: - Performance: Cached Results
-
-    private var cachedFilteredResults: [BuildFolder]?
-    private var cachedFilter: FilterType?
-
-    private func invalidateFilterCache() {
-        cachedFilteredResults = nil
-    }
 
     // MARK: - Filtering Logic
 
     /// Filter and apply all filter criteria to build folders
     func filteredResults(from buildFolders: [BuildFolder]) -> [BuildFolder] {
-        // Return cached result if filter unchanged
-        if let cached = cachedFilteredResults, cachedFilter == currentFilter {
-            return cached
-        }
 
         // First apply project type filter
         var results: [BuildFolder]
@@ -184,9 +159,6 @@ final class FilterManager {
             }
         }
 
-        // Cache and return
-        cachedFilteredResults = results
-        cachedFilter = currentFilter
         return results
     }
 
