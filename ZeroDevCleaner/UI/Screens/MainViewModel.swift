@@ -12,41 +12,16 @@ import SwiftData
 @Observable
 @MainActor
 final class MainViewModel {
-    // MARK: - Filter Types
+    // MARK: - Type Aliases (from FilterManager)
 
-    enum FilterType: String, CaseIterable, Sendable {
-        case all = "All"
-        case android = "Android"
-        case iOS = "iOS"
-        case swiftPackage = "Swift Package"
-        case flutter = "Flutter"
-        case nodeJS = "Node.js"
-        case rust = "Rust"
-        case python = "Python"
-        case go = "Go"
-        case javaMaven = "Java/Maven"
-        case ruby = "Ruby"
-        case dotNet = ".NET"
-        case unity = "Unity"
+    typealias FilterType = FilterManager.FilterType
+    typealias ComparisonOperator = FilterManager.ComparisonOperator
 
-        var icon: String {
-            switch self {
-            case .all: return "square.grid.2x2"
-            case .android: return "cube.fill"
-            case .iOS: return "apple.logo"
-            case .swiftPackage: return "shippingbox.fill"
-            case .flutter: return "wind"
-            case .nodeJS: return "atom"
-            case .rust: return "gearshape.2.fill"
-            case .python: return "chevron.left.forwardslash.chevron.right"
-            case .go: return "g.square.fill"
-            case .javaMaven: return "cup.and.saucer.fill"
-            case .ruby: return "diamond.fill"
-            case .dotNet: return "number.square.fill"
-            case .unity: return "cube.transparent.fill"
-            }
-        }
-    }
+    // MARK: - Filter Manager
+
+    let filterManager = FilterManager()
+
+    // MARK: - Sort and Tab Types
 
     enum SortColumn: String, CaseIterable {
         case projectName = "Project"
@@ -83,69 +58,45 @@ final class MainViewModel {
 
     /// Results from the last scan
     var scanResults: [BuildFolder] = [] {
-        didSet { invalidateFilterCache() }
+        didSet { invalidateSortCache() }
     }
 
-    /// Current filter type
-    var currentFilter: FilterType = .all {
-        didSet { invalidateFilterCache() }
+    // MARK: - Filter Properties (delegated to FilterManager)
+
+    var currentFilter: FilterType {
+        get { filterManager.currentFilter }
+        set { filterManager.currentFilter = newValue }
     }
 
-    /// Current quick filter preset
-    var currentPreset: FilterPreset = .all {
-        didSet { invalidateFilterCache() }
+    var currentPreset: FilterPreset {
+        get { filterManager.currentPreset }
+        set { filterManager.currentPreset = newValue }
     }
 
-    /// Comparison operators for filters
-    enum ComparisonOperator: String, CaseIterable, Sendable {
-        case equal = "="
-        case lessThan = "<"
-        case lessThanOrEqual = "<="
-        case greaterThan = ">"
-        case greaterThanOrEqual = ">="
-
-        var displayName: String {
-            rawValue
-        }
-
-        func compare<T: Comparable>(_ lhs: T, _ rhs: T) -> Bool {
-            switch self {
-            case .equal:
-                return lhs == rhs
-            case .lessThan:
-                return lhs < rhs
-            case .lessThanOrEqual:
-                return lhs <= rhs
-            case .greaterThan:
-                return lhs > rhs
-            case .greaterThanOrEqual:
-                return lhs >= rhs
-            }
-        }
+    var sizeFilterValue: Int64? {
+        get { filterManager.sizeFilterValue }
+        set { filterManager.sizeFilterValue = newValue }
     }
 
-    /// Comprehensive filter: size value in bytes (nil = no filter)
-    var sizeFilterValue: Int64? = nil {
-        didSet { invalidateFilterCache() }
+    var sizeFilterOperator: ComparisonOperator {
+        get { filterManager.sizeFilterOperator }
+        set { filterManager.sizeFilterOperator = newValue }
     }
 
-    /// Comprehensive filter: size comparison operator
-    var sizeFilterOperator: ComparisonOperator = .greaterThanOrEqual {
-        didSet { invalidateFilterCache() }
+    var daysOldFilterValue: Int? {
+        get { filterManager.daysOldFilterValue }
+        set { filterManager.daysOldFilterValue = newValue }
     }
 
-    /// Comprehensive filter: days old value (nil = no filter)
-    var daysOldFilterValue: Int? = nil {
-        didSet { invalidateFilterCache() }
+    var daysOldFilterOperator: ComparisonOperator {
+        get { filterManager.daysOldFilterOperator }
+        set { filterManager.daysOldFilterOperator = newValue }
     }
 
-    /// Comprehensive filter: days old comparison operator
-    var daysOldFilterOperator: ComparisonOperator = .greaterThanOrEqual {
-        didSet { invalidateFilterCache() }
+    var showComprehensiveFilters: Bool {
+        get { filterManager.showComprehensiveFilters }
+        set { filterManager.showComprehensiveFilters = newValue }
     }
-
-    /// Whether to show comprehensive filters
-    var showComprehensiveFilters: Bool = false
 
     /// Current sort column
     var sortColumn: SortColumn = .size {
@@ -157,18 +108,11 @@ final class MainViewModel {
         didSet { invalidateSortCache() }
     }
 
-    // MARK: - Performance: Cached Results
+    // MARK: - Performance: Cached Results (Sorting only)
 
-    private var cachedFilteredResults: [BuildFolder]?
-    private var cachedFilter: FilterType?
     private var cachedSortedResults: [BuildFolder]?
     private var cachedSortColumn: SortColumn?
     private var cachedSortOrder: SortOrder?
-
-    private func invalidateFilterCache() {
-        cachedFilteredResults = nil
-        cachedSortedResults = nil // Filter change invalidates sort too
-    }
 
     private func invalidateSortCache() {
         cachedSortedResults = nil
@@ -176,79 +120,13 @@ final class MainViewModel {
 
     /// Filtered results based on current filter and preset
     var filteredResults: [BuildFolder] {
-        // Return cached result if filter unchanged
-        if let cached = cachedFilteredResults, cachedFilter == currentFilter {
-            return cached
-        }
-
-        // First apply project type filter
-        var results: [BuildFolder]
-        if currentFilter == .all {
-            results = scanResults
-        } else {
-            results = scanResults.filter { folder in
-                switch currentFilter {
-                case .all:
-                    return true
-                case .android:
-                    return folder.projectType == .android
-                case .iOS:
-                    return folder.projectType == .iOS
-                case .swiftPackage:
-                    return folder.projectType == .swiftPackage
-                case .flutter:
-                    return folder.projectType == .flutter
-                case .nodeJS:
-                    return folder.projectType == .nodeJS
-                case .rust:
-                    return folder.projectType == .rust
-                case .python:
-                    return folder.projectType == .python
-                case .go:
-                    return folder.projectType == .go
-                case .javaMaven:
-                    return folder.projectType == .javaMaven
-                case .ruby:
-                    return folder.projectType == .ruby
-                case .dotNet:
-                    return folder.projectType == .dotNet
-                case .unity:
-                    return folder.projectType == .unity
-                }
-            }
-        }
-
-        // Then apply preset filter
-        if currentPreset != .all {
-            results = results.filter { currentPreset.matches($0) }
-        }
-
-        // Apply comprehensive size filter
-        if let sizeValue = sizeFilterValue {
-            results = results.filter { folder in
-                sizeFilterOperator.compare(folder.size, sizeValue)
-            }
-        }
-
-        // Apply comprehensive days old filter
-        if let daysValue = daysOldFilterValue {
-            results = results.filter { folder in
-                let daysSinceModified = Calendar.current.dateComponents([.day], from: folder.lastModified, to: Date()).day ?? 0
-                return daysOldFilterOperator.compare(daysSinceModified, daysValue)
-            }
-        }
-
-        // Cache and return
-        cachedFilteredResults = results
-        cachedFilter = currentFilter
-        return results
+        return filterManager.filteredResults(from: scanResults)
     }
 
     /// Sorted and filtered results
     var sortedAndFilteredResults: [BuildFolder] {
         // Return cached result if parameters unchanged
         if let cached = cachedSortedResults,
-           cachedFilter == currentFilter,
            cachedSortColumn == sortColumn,
            cachedSortOrder == sortOrder {
             return cached
@@ -324,40 +202,7 @@ final class MainViewModel {
 
     /// Filtered static locations based on current preset
     var filteredStaticLocations: [StaticLocation] {
-        var results: [StaticLocation]
-
-        if currentPreset == .all {
-            results = staticLocations
-        } else {
-            results = staticLocations.filter { currentPreset.matches($0) }
-        }
-
-        // Apply comprehensive size filter
-        if let sizeValue = sizeFilterValue {
-            results = results.filter { location in
-                sizeFilterOperator.compare(location.size, sizeValue)
-            }
-        }
-
-        // Apply comprehensive days old filter
-        if let daysValue = daysOldFilterValue {
-            results = results.filter { location in
-                let daysSinceModified = Calendar.current.dateComponents([.day], from: location.lastModified, to: Date()).day ?? 0
-                return daysOldFilterOperator.compare(daysSinceModified, daysValue)
-            }
-        }
-
-        // Sort: existing items first, then empty items at the bottom
-        return results.sorted { lhs, rhs in
-            if lhs.exists && !rhs.exists {
-                return true // existing comes before empty
-            } else if !lhs.exists && rhs.exists {
-                return false // empty comes after existing
-            } else {
-                // Both have same exists status, maintain original order by comparing sizes
-                return lhs.size > rhs.size
-            }
-        }
+        return filterManager.filteredStaticLocations(from: staticLocations)
     }
 
     /// Whether to include static locations in results
@@ -787,45 +632,12 @@ final class MainViewModel {
 
     /// Get count for a specific filter type
     func count(for filter: FilterType) -> Int {
-        if filter == .all {
-            return scanResults.count
-        }
-
-        return scanResults.filter { folder in
-            switch filter {
-            case .all:
-                return true
-            case .android:
-                return folder.projectType == .android
-            case .iOS:
-                return folder.projectType == .iOS
-            case .swiftPackage:
-                return folder.projectType == .swiftPackage
-            case .flutter:
-                return folder.projectType == .flutter
-            case .nodeJS:
-                return folder.projectType == .nodeJS
-            case .rust:
-                return folder.projectType == .rust
-            case .python:
-                return folder.projectType == .python
-            case .go:
-                return folder.projectType == .go
-            case .javaMaven:
-                return folder.projectType == .javaMaven
-            case .ruby:
-                return folder.projectType == .ruby
-            case .dotNet:
-                return folder.projectType == .dotNet
-            case .unity:
-                return folder.projectType == .unity
-            }
-        }.count
+        return filterManager.count(for: filter, in: scanResults)
     }
 
     /// Filter types sorted by count (descending)
     var sortedFilterTypes: [FilterType] {
-        return FilterType.allCases.sorted { count(for: $0) > count(for: $1) }
+        return filterManager.sortedFilterTypes(for: scanResults)
     }
 
     /// Total size of all folders
