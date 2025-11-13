@@ -181,7 +181,10 @@ Examples:
 10. Carthage Cache
 11. PHP Cache
 12. Composer Cache
-13. Docker Cache
+13. Docker Cache (with intelligent detection)
+    - Uses Docker CLI to detect: Images, Build Cache, Volumes, Stopped Containers
+    - Falls back to directory scan if Docker is not running
+    - Shows meaningful resource breakdown instead of just folder size
 14. System Cache (macOS)
 
 ## For AI Agents

@@ -69,7 +69,12 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             // Scan subfolders if supported (e.g., DerivedData, Archives, Device Support)
             var subItems: [StaticLocationSubItem] = []
             if type.supportsSubItems {
-                subItems = try await scanSubItems(at: path, type: type)
+                // Special handling for Docker - use Docker CLI if available
+                if type == .dockerCache {
+                    subItems = try await scanDockerItems()
+                } else {
+                    subItems = try await scanSubItems(at: path, type: type)
+                }
             }
 
             let location = StaticLocation(
@@ -647,5 +652,228 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
 
         let range = NSRange(name.startIndex..., in: name)
         return regex.firstMatch(in: name, options: [], range: range) != nil
+    }
+
+    // MARK: - Docker Scanning
+
+    /// Scans Docker resources using Docker CLI
+    private func scanDockerItems() async throws -> [StaticLocationSubItem] {
+        SuperLog.i("Scanning Docker resources using Docker CLI")
+        var subItems: [StaticLocationSubItem] = []
+
+        // Check if Docker CLI is available
+        guard isDockerAvailable() else {
+            SuperLog.w("Docker CLI not available, falling back to directory scan")
+            return []
+        }
+
+        // Get Docker images (including dangling)
+        if let imagesItem = try? await scanDockerImages() {
+            subItems.append(imagesItem)
+        }
+
+        // Get Docker build cache
+        if let buildCacheItem = try? await scanDockerBuildCache() {
+            subItems.append(buildCacheItem)
+        }
+
+        // Get Docker volumes
+        if let volumesItem = try? await scanDockerVolumes() {
+            subItems.append(volumesItem)
+        }
+
+        // Get Docker containers (stopped)
+        if let containersItem = try? await scanDockerContainers() {
+            subItems.append(containersItem)
+        }
+
+        SuperLog.i("Docker scan complete: found \(subItems.count) resource types")
+        return subItems
+    }
+
+    /// Check if Docker CLI is available and running
+    private func isDockerAvailable() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["docker", "info"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            SuperLog.w("Docker not available: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Scan Docker images
+    private func scanDockerImages() async throws -> StaticLocationSubItem? {
+        let output = try await runDockerCommand(["images", "--format", "{{.Size}}"])
+        guard !output.isEmpty else { return nil }
+
+        // Parse sizes and calculate total
+        let sizes = output.components(separatedBy: "\n")
+            .filter { !$0.isEmpty }
+            .compactMap { parseSizeString($0) }
+
+        let totalSize = sizes.reduce(0, +)
+        guard totalSize > 0 else { return nil }
+
+        let count = sizes.count
+
+        return StaticLocationSubItem(
+            name: "Docker Images (\(count) image\(count == 1 ? "" : "s"))",
+            path: URL(fileURLWithPath: "/var/lib/docker/images"), // Placeholder
+            size: totalSize,
+            lastModified: Date(),
+            isSelected: false,
+            subItems: []
+        )
+    }
+
+    /// Scan Docker build cache
+    private func scanDockerBuildCache() async throws -> StaticLocationSubItem? {
+        let output = try await runDockerCommand(["system", "df", "-v", "--format", "{{.Type}}\t{{.Size}}"])
+        guard !output.isEmpty else { return nil }
+
+        // Find the build cache line
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            let parts = line.components(separatedBy: "\t")
+            if parts.count == 2 && parts[0].contains("Build Cache") {
+                if let size = parseSizeString(parts[1]), size > 0 {
+                    return StaticLocationSubItem(
+                        name: "Docker Build Cache",
+                        path: URL(fileURLWithPath: "/var/lib/docker/buildkit"), // Placeholder
+                        size: size,
+                        lastModified: Date(),
+                        isSelected: false,
+                        subItems: []
+                    )
+                }
+            }
+        }
+
+        return nil
+    }
+
+    /// Scan Docker volumes
+    private func scanDockerVolumes() async throws -> StaticLocationSubItem? {
+        let output = try await runDockerCommand(["volume", "ls", "-q"])
+        guard !output.isEmpty else { return nil }
+
+        let volumes = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard !volumes.isEmpty else { return nil }
+
+        // Get total size of all volumes
+        var totalSize: Int64 = 0
+        for _ in volumes {
+            if let sizeOutput = try? await runDockerCommand(["system", "df", "-v", "--format", "{{.Size}}"]) {
+                if let size = parseSizeString(sizeOutput) {
+                    totalSize += size
+                }
+            }
+        }
+
+        return StaticLocationSubItem(
+            name: "Docker Volumes (\(volumes.count) volume\(volumes.count == 1 ? "" : "s"))",
+            path: URL(fileURLWithPath: "/var/lib/docker/volumes"), // Placeholder
+            size: totalSize,
+            lastModified: Date(),
+            isSelected: false,
+            subItems: []
+        )
+    }
+
+    /// Scan Docker containers (stopped)
+    private func scanDockerContainers() async throws -> StaticLocationSubItem? {
+        let output = try await runDockerCommand(["ps", "-a", "--filter", "status=exited", "-q"])
+        guard !output.isEmpty else { return nil }
+
+        let containers = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard !containers.isEmpty else { return nil }
+
+        // Estimate size (containers don't have direct size, use a rough estimate)
+        let estimatedSize: Int64 = Int64(containers.count) * 100_000_000 // ~100MB per container
+
+        return StaticLocationSubItem(
+            name: "Stopped Containers (\(containers.count) container\(containers.count == 1 ? "" : "s"))",
+            path: URL(fileURLWithPath: "/var/lib/docker/containers"), // Placeholder
+            size: estimatedSize,
+            lastModified: Date(),
+            isSelected: false,
+            subItems: []
+        )
+    }
+
+    /// Run Docker command and return output
+    private func runDockerCommand(_ arguments: [String]) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["docker"] + arguments
+
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+
+                if process.terminationStatus == 0 {
+                    continuation.resume(returning: output)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "DockerError", code: Int(process.terminationStatus)))
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    /// Parse Docker size string (e.g., "1.2GB", "500MB", "10KB") to bytes
+    private func parseSizeString(_ sizeStr: String) -> Int64? {
+        let trimmed = sizeStr.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Extract number and unit
+        let pattern = #"([\d.]+)\s*([KMGT]?B)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(trimmed.startIndex..., in: trimmed)),
+              match.numberOfRanges == 3 else {
+            return nil
+        }
+
+        guard let numberRange = Range(match.range(at: 1), in: trimmed),
+              let unitRange = Range(match.range(at: 2), in: trimmed),
+              let value = Double(String(trimmed[numberRange])) else {
+            return nil
+        }
+
+        let unit = String(trimmed[unitRange]).uppercased()
+        let multiplier: Double
+        switch unit {
+        case "B":
+            multiplier = 1
+        case "KB":
+            multiplier = 1024
+        case "MB":
+            multiplier = 1024 * 1024
+        case "GB":
+            multiplier = 1024 * 1024 * 1024
+        case "TB":
+            multiplier = 1024 * 1024 * 1024 * 1024
+        default:
+            return nil
+        }
+
+        return Int64(value * multiplier)
     }
 }
