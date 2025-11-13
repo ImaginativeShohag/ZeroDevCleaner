@@ -562,6 +562,8 @@ final class MainViewModel {
     func toggleSelection(for folder: BuildFolder) {
         if let index = scanResults.firstIndex(where: { $0.id == folder.id }) {
             scanResults[index].isSelected.toggle()
+            // Invalidate cache to ensure UI updates
+            invalidateSortCache()
         }
     }
 
@@ -581,6 +583,8 @@ final class MainViewModel {
                 scanResults[index].isSelected = true
             }
         }
+        // Invalidate cache to ensure UI updates
+        invalidateSortCache()
     }
 
     /// Deselects all folders (in current filter view)
@@ -591,6 +595,8 @@ final class MainViewModel {
                 scanResults[index].isSelected = false
             }
         }
+        // Invalidate cache to ensure UI updates
+        invalidateSortCache()
     }
 
     /// Returns currently selected folders
