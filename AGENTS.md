@@ -168,7 +168,7 @@ Examples:
 11. **.NET (`bin/`, `obj/`)**
 12. **Unity (`Library/`, `Temp/`)**
 
-### System Cache Locations (9)
+### System Cache Locations (14)
 1. DerivedData
 2. Xcode Archives
 3. iOS Device Support
@@ -177,7 +177,12 @@ Examples:
 6. CocoaPods Cache
 7. npm Cache
 8. Yarn Cache
-9. Carthage Cache
+9. Bun Cache
+10. Carthage Cache
+11. PHP Cache
+12. Composer Cache
+13. Docker Cache
+14. System Cache (macOS)
 
 ## For AI Agents
 

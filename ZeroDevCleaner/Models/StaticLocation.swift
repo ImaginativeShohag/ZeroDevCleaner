@@ -17,7 +17,12 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     case cocoapodsCache = "CocoaPods Cache"
     case npmCache = "npm Cache"
     case yarnCache = "Yarn Cache"
+    case bunCache = "Bun Cache"
     case carthageCache = "Carthage Cache"
+    case phpCache = "PHP Cache"
+    case composerCache = "Composer Cache"
+    case dockerCache = "Docker Cache"
+    case systemCache = "System Cache"
     case custom = "Custom Cache"
 
     var displayName: String { rawValue }
@@ -40,8 +45,18 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return "npm package cache"
         case .yarnCache:
             return "Yarn package cache"
+        case .bunCache:
+            return "Bun package cache"
         case .carthageCache:
             return "Carthage build cache"
+        case .phpCache:
+            return "PHP OPcache and session files"
+        case .composerCache:
+            return "Composer package cache"
+        case .dockerCache:
+            return "Docker images, containers, and build cache"
+        case .systemCache:
+            return "macOS system caches and temporary files"
         case .custom:
             return "User-defined custom cache location"
         }
@@ -65,8 +80,18 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return "n.square.fill"
         case .yarnCache:
             return "y.square.fill"
+        case .bunCache:
+            return "b.square.fill"
         case .carthageCache:
             return "archivebox.fill"
+        case .phpCache:
+            return "p.square.fill"
+        case .composerCache:
+            return "music.note.list"
+        case .dockerCache:
+            return "cube.transparent.fill"
+        case .systemCache:
+            return "gearshape.2.fill"
         case .custom:
             return "folder.badge.gearshape" // Default, will be overridden by custom icon
         }
@@ -90,8 +115,18 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return .orange
         case .yarnCache:
             return .cyan
+        case .bunCache:
+            return .yellow
         case .carthageCache:
             return .purple
+        case .phpCache:
+            return .indigo
+        case .composerCache:
+            return .brown
+        case .dockerCache:
+            return .blue
+        case .systemCache:
+            return .gray
         case .custom:
             return .gray // Default, will be overridden by custom color
         }
@@ -116,8 +151,18 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
             return home.appendingPathComponent(".npm")
         case .yarnCache:
             return home.appendingPathComponent("Library/Caches/Yarn")
+        case .bunCache:
+            return home.appendingPathComponent(".bun/install/cache")
         case .carthageCache:
             return home.appendingPathComponent("Library/Caches/org.carthage.CarthageKit")
+        case .phpCache:
+            return home.appendingPathComponent("Library/Caches/php")
+        case .composerCache:
+            return home.appendingPathComponent(".composer/cache")
+        case .dockerCache:
+            return home.appendingPathComponent("Library/Containers/com.docker.docker/Data")
+        case .systemCache:
+            return home.appendingPathComponent("Library/Caches")
         case .custom:
             return home // Not used for custom types
         }
@@ -126,7 +171,7 @@ enum StaticLocationType: String, Codable, CaseIterable, Sendable {
     /// Whether this location type should show subfolders
     var supportsSubItems: Bool {
         switch self {
-        case .derivedData, .xcodeArchives, .deviceSupport, .xcodeDocumentationCache, .custom:
+        case .derivedData, .xcodeArchives, .deviceSupport, .xcodeDocumentationCache, .dockerCache, .systemCache, .custom:
             return true
         default:
             return false
