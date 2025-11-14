@@ -189,6 +189,13 @@ struct StaticLocationSubItem: Identifiable, Hashable {
     var isSelected: Bool = false
     var subItems: [StaticLocationSubItem] = []  // For nested items (e.g., app versions in archives)
 
+    // Docker-specific metadata
+    var warningMessage: String?        // Warning message to display (e.g., "Docker not running", "Unused volume")
+    var hintMessage: String?           // Hint/info message to display (e.g., "Running", "In use by 2 containers")
+    var requiresDockerCli: Bool = false // Indicates this item requires Docker CLI for deletion
+    var dockerResourceId: String?      // Docker resource identifier (image ID, container ID, volume name, cache ID)
+    var dockerResourceType: String?    // Type of Docker resource ("image", "volume", "container", "buildCache")
+
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }

@@ -29,4 +29,13 @@ protocol FileDeleterProtocol: Sendable {
         urls: [URL],
         progressHandler: DeletionProgressHandler?
     ) async throws
+
+    /// Deletes static location sub-items (handles both file system and Docker CLI deletion)
+    /// - Parameters:
+    ///   - items: Static location sub-items to delete
+    ///   - progressHandler: Called with current index and total count
+    func delete(
+        staticItems: [StaticLocationSubItem],
+        progressHandler: DeletionProgressHandler?
+    ) async throws
 }

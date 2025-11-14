@@ -747,6 +747,38 @@ struct ScanResultsView: View {
 
                                                     Spacer()
 
+                                                    // Hint message badge (e.g., "Running")
+                                                    if let hint = subItem.hintMessage {
+                                                        HStack(spacing: 2) {
+                                                            Image(systemName: "info.circle.fill")
+                                                                .foregroundStyle(.green)
+                                                                .font(.system(size: 9))
+                                                            Text(hint)
+                                                                .font(.caption2)
+                                                                .foregroundStyle(.green)
+                                                        }
+                                                        .padding(.horizontal, 6)
+                                                        .padding(.vertical, 2)
+                                                        .background(Color.green.opacity(0.1))
+                                                        .cornerRadius(4)
+                                                    }
+
+                                                    // Warning message badge (e.g., "Dangling image")
+                                                    if let warning = subItem.warningMessage {
+                                                        HStack(spacing: 2) {
+                                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                                .foregroundStyle(.orange)
+                                                                .font(.system(size: 9))
+                                                            Text(warning)
+                                                                .font(.caption2)
+                                                                .foregroundStyle(.orange)
+                                                        }
+                                                        .padding(.horizontal, 6)
+                                                        .padding(.vertical, 2)
+                                                        .background(Color.orange.opacity(0.1))
+                                                        .cornerRadius(4)
+                                                    }
+
                                                     Text(subItem.formattedSize)
                                                         .font(.caption)
                                                         .monospacedDigit()

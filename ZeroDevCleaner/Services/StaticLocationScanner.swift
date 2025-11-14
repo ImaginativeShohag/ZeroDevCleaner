@@ -59,23 +59,36 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 continue
             }
 
-            // Calculate size
-            let size = try await sizeCalculator.calculateSize(of: path)
-
-            // Get last modified date
-            let attributes = try fileManager.attributesOfItem(atPath: path.path)
-            let lastModified = attributes[.modificationDate] as? Date ?? Date()
-
             // Scan subfolders if supported (e.g., DerivedData, Archives, Device Support)
             var subItems: [StaticLocationSubItem] = []
             if type.supportsSubItems {
                 // Special handling for Docker - use Docker CLI if available
                 if type == .dockerCache {
                     subItems = try await scanDockerItems()
+
+                    // If no Docker sub-items found (Docker not installed), skip this location entirely
+                    if subItems.isEmpty {
+                        SuperLog.d("Docker not installed or no Docker resources found, skipping Docker Cache location")
+                        continue
+                    }
                 } else {
                     subItems = try await scanSubItems(at: path, type: type)
                 }
             }
+
+            // Calculate size (but skip for Docker since we get it from sub-items)
+            let size: Int64
+            if type == .dockerCache {
+                // For Docker, size is sum of sub-items (from CLI)
+                size = subItems.reduce(0) { $0 + $1.size }
+            } else {
+                // For other types, calculate from file system
+                size = try await sizeCalculator.calculateSize(of: path)
+            }
+
+            // Get last modified date
+            let attributes = try fileManager.attributesOfItem(atPath: path.path)
+            let lastModified = attributes[.modificationDate] as? Date ?? Date()
 
             let location = StaticLocation(
                 type: type,
@@ -656,63 +669,242 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
 
     // MARK: - Docker Scanning
 
+    /// Common Docker CLI locations to check
+    private let dockerPaths = [
+        "/usr/local/bin/docker",           // Most common (Intel Macs, Homebrew)
+        "/opt/homebrew/bin/docker",        // Apple Silicon Macs with Homebrew
+        "/Applications/Docker.app/Contents/Resources/bin/docker", // Docker Desktop bundle
+        "/usr/bin/docker"                  // Less common but possible
+    ]
+
+    /// Find Docker executable path
+    private func findDockerPath() -> String? {
+        for path in dockerPaths {
+            if fileManager.fileExists(atPath: path) {
+                SuperLog.d("Found Docker at: \(path)")
+                return path
+            }
+        }
+        SuperLog.w("Docker not found in any standard location: \(dockerPaths)")
+        return nil
+    }
+
     /// Scans Docker resources using Docker CLI
     private func scanDockerItems() async throws -> [StaticLocationSubItem] {
         SuperLog.i("Scanning Docker resources using Docker CLI")
         var subItems: [StaticLocationSubItem] = []
 
-        // Check if Docker CLI is available
-        guard isDockerAvailable() else {
-            SuperLog.w("Docker CLI not available, falling back to directory scan")
-            return []
+        // Check if Docker is installed first
+        guard isDockerInstalled() else {
+            SuperLog.i("Docker CLI not installed, skipping Docker cache entirely")
+            return [] // Don't show Docker at all if not installed
         }
 
-        // Get Docker images (including dangling)
-        if let imagesItem = try? await scanDockerImages() {
-            subItems.append(imagesItem)
+        // Check if Docker daemon is running
+        let dockerAvailable = isDockerAvailable()
+
+        if dockerAvailable {
+            SuperLog.i("Docker daemon is running, scanning detailed resources...")
+
+            // Get Docker images (with repository grouping)
+            let images = try? await scanDockerImagesDetailed()
+            if let images = images, !images.isEmpty {
+                // Create a parent item for images
+                let totalSize = images.reduce(0) { $0 + $1.size }
+                let imagesParent = StaticLocationSubItem(
+                    name: "Images (\(images.count) repositor\(images.count == 1 ? "y" : "ies"))",
+                    path: URL(fileURLWithPath: "/var/lib/docker/images"),
+                    size: totalSize,
+                    lastModified: Date(),
+                    isSelected: false,
+                    subItems: images
+                )
+                subItems.append(imagesParent)
+            }
+
+            // Get Docker containers (ALL - running and stopped)
+            let containers = try? await scanDockerContainersDetailed()
+            if let containers = containers, !containers.isEmpty {
+                // Create a parent item for containers
+                let totalSize = containers.reduce(0) { $0 + $1.size }
+                let containerParent = StaticLocationSubItem(
+                    name: "Containers (\(containers.count))",
+                    path: URL(fileURLWithPath: "/var/lib/docker/containers"),
+                    size: totalSize,
+                    lastModified: Date(),
+                    isSelected: false,
+                    subItems: containers
+                )
+                subItems.append(containerParent)
+            }
+
+            // Get Docker build cache (with detailed entries if available)
+            let buildCacheItems = try? await scanDockerBuildCacheDetailed()
+            if let buildCacheItems = buildCacheItems, !buildCacheItems.isEmpty {
+                // Create a parent item for build cache
+                let totalSize = buildCacheItems.reduce(0) { $0 + $1.size }
+                let buildCacheParent = StaticLocationSubItem(
+                    name: "Build Cache (\(buildCacheItems.count) entr\(buildCacheItems.count == 1 ? "y" : "ies"))",
+                    path: URL(fileURLWithPath: "/var/lib/docker/buildkit"),
+                    size: totalSize,
+                    lastModified: Date(),
+                    isSelected: false,
+                    subItems: buildCacheItems
+                )
+                subItems.append(buildCacheParent)
+            }
+
+            // Get Docker volumes (with usage hints)
+            let volumesItems = try? await scanDockerVolumesDetailed()
+            if let volumesItems = volumesItems, !volumesItems.isEmpty {
+                // Create a parent item for volumes
+                let totalSize = volumesItems.reduce(0) { $0 + $1.size }
+                let volumesParent = StaticLocationSubItem(
+                    name: "Volumes (\(volumesItems.count))",
+                    path: URL(fileURLWithPath: "/var/lib/docker/volumes"),
+                    size: totalSize,
+                    lastModified: Date(),
+                    isSelected: false,
+                    subItems: volumesItems
+                )
+                subItems.append(volumesParent)
+            }
+        } else {
+            SuperLog.w("Docker daemon not running, showing only logs folder with warning")
         }
 
-        // Get Docker build cache
-        if let buildCacheItem = try? await scanDockerBuildCache() {
-            subItems.append(buildCacheItem)
-        }
-
-        // Get Docker volumes
-        if let volumesItem = try? await scanDockerVolumes() {
-            subItems.append(volumesItem)
-        }
-
-        // Get Docker containers (stopped)
-        if let containersItem = try? await scanDockerContainers() {
-            subItems.append(containersItem)
+        // Always add log folder sub-item if Docker is installed and folder exists
+        // This is safe to delete and accessible even when daemon is not running
+        if let logItem = await scanDockerLogFolder(daemonRunning: dockerAvailable) {
+            subItems.append(logItem)
         }
 
         SuperLog.i("Docker scan complete: found \(subItems.count) resource types")
         return subItems
     }
 
-    /// Check if Docker CLI is available and running
-    private func isDockerAvailable() -> Bool {
+    /// Scan Docker log folder (always accessible, safe to delete)
+    private func scanDockerLogFolder(daemonRunning: Bool) async -> StaticLocationSubItem? {
+        SuperLog.d("Scanning Docker log folder...")
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let logPath = home.appendingPathComponent("Library/Containers/com.docker.docker/Data/log")
+
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: logPath.path, isDirectory: &isDirectory)
+
+        guard exists && isDirectory.boolValue else {
+            SuperLog.d("Docker log folder does not exist at: \(logPath.path)")
+            return nil
+        }
+
+        do {
+            let size = try await sizeCalculator.calculateSize(of: logPath)
+            let attributes = try fileManager.attributesOfItem(atPath: logPath.path)
+            let lastModified = attributes[.modificationDate] as? Date ?? Date()
+
+            SuperLog.i("Found Docker log folder with size: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+
+            // Add warning message if daemon is not running
+            let warningMessage: String? = daemonRunning ? nil : "Docker is not running. Start Docker Desktop to see images, containers, volumes, and build cache."
+
+            return StaticLocationSubItem(
+                name: "Docker Logs",
+                path: logPath,
+                size: size,
+                lastModified: lastModified,
+                isSelected: false,
+                subItems: [],
+                warningMessage: warningMessage,
+                hintMessage: nil,
+                requiresDockerCli: false, // Logs can be deleted via file system
+                dockerResourceId: nil,
+                dockerResourceType: nil
+            )
+        } catch {
+            SuperLog.w("Failed to scan Docker log folder: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Check if Docker CLI is installed (works without daemon)
+    private func isDockerInstalled() -> Bool {
+        SuperLog.d("Checking if Docker CLI is installed...")
+
+        guard let dockerPath = findDockerPath() else {
+            SuperLog.w("Docker CLI is not installed")
+            return false
+        }
+
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["docker", "info"]
+        process.executableURL = URL(fileURLWithPath: dockerPath)
+        process.arguments = ["--version"]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
 
         do {
             try process.run()
             process.waitUntilExit()
-            return process.terminationStatus == 0
+
+            let isInstalled = process.terminationStatus == 0
+            SuperLog.d("Docker process exited with code: \(process.terminationStatus)")
+            if isInstalled {
+                let outputPipe = process.standardOutput as! Pipe
+                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                let version = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown version"
+                SuperLog.i("Docker CLI is installed at \(dockerPath): \(version)")
+            } else {
+                SuperLog.w("Docker CLI found but --version failed")
+            }
+            return isInstalled
         } catch {
-            SuperLog.w("Docker not available: \(error.localizedDescription)")
+            SuperLog.w("Docker CLI check failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Check if Docker CLI is available and running
+    private func isDockerAvailable() -> Bool {
+        SuperLog.d("Checking if Docker daemon is available...")
+
+        guard let dockerPath = findDockerPath() else {
+            SuperLog.w("Docker CLI not found, daemon cannot be checked")
+            return false
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: dockerPath)
+        process.arguments = ["info"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let isAvailable = process.terminationStatus == 0
+            if isAvailable {
+                SuperLog.i("Docker daemon is available and running")
+            } else {
+                let errorPipe = process.standardError as! Pipe
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                SuperLog.w("Docker daemon not running - Exit code: \(process.terminationStatus), Error: \(errorOutput)")
+            }
+            return isAvailable
+        } catch {
+            SuperLog.w("Docker daemon check failed: \(error.localizedDescription)")
             return false
         }
     }
 
     /// Scan Docker images
     private func scanDockerImages() async throws -> StaticLocationSubItem? {
+        SuperLog.d("Scanning Docker images...")
         let output = try await runDockerCommand(["images", "--format", "{{.Size}}"])
-        guard !output.isEmpty else { return nil }
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker images found")
+            return nil
+        }
 
         // Parse sizes and calculate total
         let sizes = output.components(separatedBy: "\n")
@@ -720,9 +912,13 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             .compactMap { parseSizeString($0) }
 
         let totalSize = sizes.reduce(0, +)
-        guard totalSize > 0 else { return nil }
+        guard totalSize > 0 else {
+            SuperLog.d("Docker images total size is 0")
+            return nil
+        }
 
         let count = sizes.count
+        SuperLog.i("Found \(count) Docker image(s) with total size: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))")
 
         return StaticLocationSubItem(
             name: "Docker Images (\(count) image\(count == 1 ? "" : "s"))",
@@ -736,8 +932,12 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
 
     /// Scan Docker build cache
     private func scanDockerBuildCache() async throws -> StaticLocationSubItem? {
+        SuperLog.d("Scanning Docker build cache...")
         let output = try await runDockerCommand(["system", "df", "-v", "--format", "{{.Type}}\t{{.Size}}"])
-        guard !output.isEmpty else { return nil }
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker build cache information found")
+            return nil
+        }
 
         // Find the build cache line
         let lines = output.components(separatedBy: "\n")
@@ -745,6 +945,7 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             let parts = line.components(separatedBy: "\t")
             if parts.count == 2 && parts[0].contains("Build Cache") {
                 if let size = parseSizeString(parts[1]), size > 0 {
+                    SuperLog.i("Found Docker build cache with size: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
                     return StaticLocationSubItem(
                         name: "Docker Build Cache",
                         path: URL(fileURLWithPath: "/var/lib/docker/buildkit"), // Placeholder
@@ -757,16 +958,24 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             }
         }
 
+        SuperLog.d("No Docker build cache data found in output")
         return nil
     }
 
     /// Scan Docker volumes
     private func scanDockerVolumes() async throws -> StaticLocationSubItem? {
+        SuperLog.d("Scanning Docker volumes...")
         let output = try await runDockerCommand(["volume", "ls", "-q"])
-        guard !output.isEmpty else { return nil }
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker volumes found")
+            return nil
+        }
 
         let volumes = output.components(separatedBy: "\n").filter { !$0.isEmpty }
-        guard !volumes.isEmpty else { return nil }
+        guard !volumes.isEmpty else {
+            SuperLog.d("No Docker volumes found after filtering")
+            return nil
+        }
 
         // Get total size of all volumes
         var totalSize: Int64 = 0
@@ -778,6 +987,8 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             }
         }
 
+        SuperLog.i("Found \(volumes.count) Docker volume(s) with total size: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))")
+
         return StaticLocationSubItem(
             name: "Docker Volumes (\(volumes.count) volume\(volumes.count == 1 ? "" : "s"))",
             path: URL(fileURLWithPath: "/var/lib/docker/volumes"), // Placeholder
@@ -788,37 +999,426 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         )
     }
 
-    /// Scan Docker containers (stopped)
-    private func scanDockerContainers() async throws -> StaticLocationSubItem? {
-        let output = try await runDockerCommand(["ps", "-a", "--filter", "status=exited", "-q"])
-        guard !output.isEmpty else { return nil }
+    /// Scan Docker containers (ALL - running and stopped) with detailed information
+    private func scanDockerContainersDetailed() async throws -> [StaticLocationSubItem] {
+        SuperLog.d("Scanning all Docker containers (running and stopped)...")
 
-        let containers = output.components(separatedBy: "\n").filter { !$0.isEmpty }
-        guard !containers.isEmpty else { return nil }
+        // Get all containers with JSON format for structured parsing
+        let output = try await runDockerCommand(["ps", "-a", "--format", "{{json .}}"])
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker containers found")
+            return []
+        }
 
-        // Estimate size (containers don't have direct size, use a rough estimate)
-        let estimatedSize: Int64 = Int64(containers.count) * 100_000_000 // ~100MB per container
+        let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard !lines.isEmpty else {
+            SuperLog.d("No Docker containers found after filtering")
+            return []
+        }
 
-        return StaticLocationSubItem(
-            name: "Stopped Containers (\(containers.count) container\(containers.count == 1 ? "" : "s"))",
-            path: URL(fileURLWithPath: "/var/lib/docker/containers"), // Placeholder
-            size: estimatedSize,
-            lastModified: Date(),
-            isSelected: false,
-            subItems: []
-        )
+        var containers: [StaticLocationSubItem] = []
+
+        for line in lines {
+            guard let jsonData = line.data(using: .utf8),
+                  let container = try? JSONDecoder().decode(DockerContainer.self, from: jsonData) else {
+                SuperLog.w("Failed to parse container JSON: \(line)")
+                continue
+            }
+
+            // Parse size if available (format: "virtual size" or just size)
+            let sizeBytes = parseSizeString(container.size) ?? 100_000_000 // Default 100MB estimate
+
+            // Determine hint message based on state
+            var hint: String?
+            if container.state.lowercased() == "running" {
+                hint = "Running"
+            } else if container.state.lowercased() == "paused" {
+                hint = "Paused"
+            }
+
+            // Create display name with image and status
+            let displayName = "\(container.names) (\(container.image))"
+
+            let subItem = StaticLocationSubItem(
+                name: displayName,
+                path: URL(fileURLWithPath: "/var/lib/docker/containers/\(container.id)"), // Placeholder path
+                size: sizeBytes,
+                lastModified: parseDockerDate(container.createdAt) ?? Date(),
+                isSelected: false,
+                subItems: [],
+                warningMessage: nil,
+                hintMessage: hint,
+                requiresDockerCli: true,
+                dockerResourceId: container.id,
+                dockerResourceType: "container"
+            )
+
+            containers.append(subItem)
+            SuperLog.d("  - Container: \(container.names) (\(container.state)) - \(container.status)")
+        }
+
+        // Sort: Running containers first, then by last modified
+        containers.sort { lhs, rhs in
+            if (lhs.hintMessage == "Running") != (rhs.hintMessage == "Running") {
+                return lhs.hintMessage == "Running"
+            }
+            return lhs.lastModified > rhs.lastModified
+        }
+
+        SuperLog.i("Found \(containers.count) Docker container(s)")
+        return containers
+    }
+
+    /// Scan Docker images with detailed information and repository grouping
+    private func scanDockerImagesDetailed() async throws -> [StaticLocationSubItem] {
+        SuperLog.d("Scanning Docker images with detailed information...")
+
+        // Get all images with JSON format
+        let output = try await runDockerCommand(["images", "--format", "{{json .}}"])
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker images found")
+            return []
+        }
+
+        let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard !lines.isEmpty else {
+            SuperLog.d("No Docker images found after filtering")
+            return []
+        }
+
+        // Dictionary to group images by repository
+        var imagesByRepository: [String: [DockerImage]] = [:]
+
+        for line in lines {
+            guard let jsonData = line.data(using: .utf8),
+                  let image = try? JSONDecoder().decode(DockerImage.self, from: jsonData) else {
+                SuperLog.w("Failed to parse image JSON: \(line)")
+                continue
+            }
+
+            let repository = image.repository.isEmpty ? "<none>" : image.repository
+            imagesByRepository[repository, default: []].append(image)
+        }
+
+        SuperLog.d("Found \(imagesByRepository.count) unique repository(ies)")
+
+        var repositoryItems: [StaticLocationSubItem] = []
+
+        for (repository, images) in imagesByRepository {
+            // Sort images by creation date (newest first)
+            let sortedImages = images.sorted { img1, img2 in
+                if let date1 = parseDockerDate(img1.createdAt), let date2 = parseDockerDate(img2.createdAt) {
+                    return date1 > date2
+                }
+                return false
+            }
+
+            // Create sub-items for each tag
+            var tagItems: [StaticLocationSubItem] = []
+            for image in sortedImages {
+                let sizeBytes = parseSizeString(image.size) ?? 0
+                let tag = image.tag.isEmpty ? "<none>" : image.tag
+                let tagName = repository == "<none>" ? image.id : tag
+
+                // For dangling images, add a warning
+                let warning: String? = (repository == "<none>" && tag == "<none>") ? "Dangling image" : nil
+
+                let tagItem = StaticLocationSubItem(
+                    name: tagName,
+                    path: URL(fileURLWithPath: "/var/lib/docker/images/\(image.id)"),
+                    size: sizeBytes,
+                    lastModified: parseDockerDate(image.createdAt) ?? Date(),
+                    isSelected: false,
+                    subItems: [],
+                    warningMessage: warning,
+                    hintMessage: nil,
+                    requiresDockerCli: true,
+                    dockerResourceId: image.id,
+                    dockerResourceType: "image"
+                )
+                tagItems.append(tagItem)
+            }
+
+            // Calculate total size for this repository
+            let totalSize = tagItems.reduce(0) { $0 + $1.size }
+
+            // Create repository parent item
+            let repositoryName = repository == "<none>" ? "<none> (Dangling)" : repository
+            let repositoryItem = StaticLocationSubItem(
+                name: "\(repositoryName) (\(tagItems.count) image\(tagItems.count == 1 ? "" : "s"))",
+                path: URL(fileURLWithPath: "/var/lib/docker/images"),
+                size: totalSize,
+                lastModified: tagItems.first?.lastModified ?? Date(),
+                isSelected: false,
+                subItems: tagItems
+            )
+
+            repositoryItems.append(repositoryItem)
+            SuperLog.d("  - Repository: \(repository) with \(tagItems.count) image(s), total size: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))")
+        }
+
+        // Sort repositories alphabetically, but put dangling images at the end
+        repositoryItems.sort { lhs, rhs in
+            let lhsIsDangling = lhs.name.hasPrefix("<none>")
+            let rhsIsDangling = rhs.name.hasPrefix("<none>")
+
+            if lhsIsDangling != rhsIsDangling {
+                return !lhsIsDangling // Non-dangling first
+            }
+            return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+
+        SuperLog.i("Found \(repositoryItems.count) Docker image repository(ies)")
+        return repositoryItems
+    }
+
+    /// Scan Docker volumes with detailed information and usage hints
+    private func scanDockerVolumesDetailed() async throws -> [StaticLocationSubItem] {
+        SuperLog.d("Scanning Docker volumes with detailed information...")
+
+        // Get all volumes with JSON format
+        let output = try await runDockerCommand(["volume", "ls", "--format", "{{json .}}"])
+        guard !output.isEmpty else {
+            SuperLog.d("No Docker volumes found")
+            return []
+        }
+
+        let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard !lines.isEmpty else {
+            SuperLog.d("No Docker volumes found after filtering")
+            return []
+        }
+
+        var volumes: [StaticLocationSubItem] = []
+
+        for line in lines {
+            guard let jsonData = line.data(using: .utf8),
+                  let volume = try? JSONDecoder().decode(DockerVolume.self, from: jsonData) else {
+                SuperLog.w("Failed to parse volume JSON: \(line)")
+                continue
+            }
+
+            // Try to get volume size by inspecting it
+            // Note: Volume size is not directly available, we need to use inspect or system df
+            let sizeBytes: Int64
+            if let inspectOutput = try? await runDockerCommand(["volume", "inspect", volume.name, "--format", "{{.Mountpoint}}"]),
+               !inspectOutput.isEmpty {
+                let mountpoint = inspectOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Try to calculate size from mountpoint (this may not work on macOS Docker Desktop)
+                sizeBytes = 100_000_000 // Default 100MB estimate
+                SuperLog.d("  - Volume \(volume.name) mountpoint: \(mountpoint)")
+            } else {
+                sizeBytes = 100_000_000 // Default 100MB estimate
+            }
+
+            // Check if volume is in use (Links > 0 means it's used by containers)
+            // We'll need to get this info from docker system df -v
+            let hintMessage: String? = nil // Will be set if we can determine usage
+            let warningMessage: String? = nil // Will be set for unused volumes
+
+            let volumeItem = StaticLocationSubItem(
+                name: volume.name,
+                path: URL(fileURLWithPath: "/var/lib/docker/volumes/\(volume.name)"),
+                size: sizeBytes,
+                lastModified: Date(), // Volumes don't have creation date in standard output
+                isSelected: false,
+                subItems: [],
+                warningMessage: warningMessage,
+                hintMessage: hintMessage,
+                requiresDockerCli: true,
+                dockerResourceId: volume.name,
+                dockerResourceType: "volume"
+            )
+
+            volumes.append(volumeItem)
+            SuperLog.d("  - Volume: \(volume.name) (driver: \(volume.driver))")
+        }
+
+        // Sort by name
+        volumes.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+
+        SuperLog.i("Found \(volumes.count) Docker volume(s)")
+        return volumes
+    }
+
+    /// Scan Docker build cache with detailed information
+    /// Note: Build cache scanning uses `docker buildx du` which may not be available on all systems
+    /// Falls back to showing aggregate cache from `docker system df`
+    private func scanDockerBuildCacheDetailed() async throws -> [StaticLocationSubItem] {
+        SuperLog.d("Scanning Docker build cache...")
+
+        // Try using buildx du for detailed cache information
+        if let buildxOutput = try? await runDockerCommand(["buildx", "du", "--verbose"]) {
+            return try parseBuildxDuOutput(buildxOutput)
+        }
+
+        SuperLog.d("buildx du not available, falling back to system df")
+
+        // Fallback: use system df to get aggregate build cache size
+        if let systemDfOutput = try? await runDockerCommand(["system", "df", "-v"]) {
+            return try parseSystemDfBuildCache(systemDfOutput)
+        }
+
+        SuperLog.d("No build cache information available")
+        return []
+    }
+
+    /// Parse buildx du output for detailed cache entries
+    private func parseBuildxDuOutput(_ output: String) throws -> [StaticLocationSubItem] {
+        SuperLog.d("Parsing buildx du output...")
+        var cacheItems: [StaticLocationSubItem] = []
+
+        let lines = output.components(separatedBy: "\n")
+
+        // Skip header lines and parse data rows
+        // Format: ID  RECLAIMABLE  SIZE  LAST ACCESSED  DESCRIPTION
+        for line in lines.dropFirst(1) where !line.isEmpty {
+            let components = line.split(separator: "\t").map { String($0).trimmingCharacters(in: .whitespaces) }
+            guard components.count >= 3 else { continue }
+
+            let cacheId = components[0]
+            let sizeStr = components[2]
+            let lastAccessed = components.count > 3 ? components[3] : "Unknown"
+
+            guard let sizeBytes = parseSizeString(sizeStr) else { continue }
+
+            // Truncate cache ID for display
+            let displayId = String(cacheId.prefix(12))
+
+            let cacheItem = StaticLocationSubItem(
+                name: "Cache \(displayId)",
+                path: URL(fileURLWithPath: "/var/lib/docker/buildkit/\(cacheId)"),
+                size: sizeBytes,
+                lastModified: Date(), // buildx doesn't provide exact date
+                isSelected: false,
+                subItems: [],
+                warningMessage: nil,
+                hintMessage: lastAccessed != "Unknown" ? "Last used: \(lastAccessed)" : nil,
+                requiresDockerCli: true,
+                dockerResourceId: cacheId,
+                dockerResourceType: "buildCache"
+            )
+
+            cacheItems.append(cacheItem)
+        }
+
+        SuperLog.i("Found \(cacheItems.count) build cache entry(ies) via buildx du")
+        return cacheItems
+    }
+
+    /// Parse system df output for aggregate build cache
+    private func parseSystemDfBuildCache(_ output: String) throws -> [StaticLocationSubItem] {
+        SuperLog.d("Parsing system df for build cache...")
+
+        // Look for "Build Cache" line in output
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            if line.contains("Build Cache") {
+                // Extract size from line (format varies)
+                let components = line.split(separator: " ").map { String($0) }
+
+                // Find size component (usually has KB, MB, GB)
+                for component in components {
+                    if let size = parseSizeString(component), size > 0 {
+                        let cacheItem = StaticLocationSubItem(
+                            name: "Build Cache (aggregate)",
+                            path: URL(fileURLWithPath: "/var/lib/docker/buildkit"),
+                            size: size,
+                            lastModified: Date(),
+                            isSelected: false,
+                            subItems: [],
+                            warningMessage: nil,
+                            hintMessage: "Cannot show individual cache entries. Use 'docker builder prune' to clean.",
+                            requiresDockerCli: false, // Can't delete individual items
+                            dockerResourceId: nil,
+                            dockerResourceType: nil
+                        )
+
+                        SuperLog.i("Found aggregate build cache: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+                        return [cacheItem]
+                    }
+                }
+            }
+        }
+
+        SuperLog.d("No build cache found in system df output")
+        return []
+    }
+
+    // MARK: - Docker JSON Structures
+
+    /// Docker container JSON structure
+    private struct DockerContainer: Decodable {
+        let id: String              // Container ID (short)
+        let names: String           // Container names
+        let image: String           // Image name
+        let state: String           // State: running, exited, paused, etc.
+        let status: String          // Human-readable status (e.g., "Up 2 hours", "Exited (0) 3 days ago")
+        let createdAt: String       // Creation timestamp
+        let size: String            // Size information
+
+        enum CodingKeys: String, CodingKey {
+            case id = "ID"
+            case names = "Names"
+            case image = "Image"
+            case state = "State"
+            case status = "Status"
+            case createdAt = "CreatedAt"
+            case size = "Size"
+        }
+    }
+
+    /// Docker image JSON structure
+    private struct DockerImage: Decodable {
+        let repository: String      // Repository name
+        let tag: String            // Image tag
+        let id: String             // Image ID (short)
+        let createdAt: String      // Creation timestamp
+        let size: String           // Size (e.g., "1.2GB")
+
+        enum CodingKeys: String, CodingKey {
+            case repository = "Repository"
+            case tag = "Tag"
+            case id = "ID"
+            case createdAt = "CreatedAt"
+            case size = "Size"
+        }
+    }
+
+    /// Docker volume JSON structure
+    private struct DockerVolume: Decodable {
+        let name: String           // Volume name
+        let driver: String         // Volume driver (usually "local")
+
+        enum CodingKeys: String, CodingKey {
+            case name = "Name"
+            case driver = "Driver"
+        }
     }
 
     /// Run Docker command and return output
     private func runDockerCommand(_ arguments: [String]) async throws -> String {
+        let commandString = "docker " + arguments.joined(separator: " ")
+        SuperLog.d("Executing Docker command: \(commandString)")
+
+        guard let dockerPath = findDockerPath() else {
+            SuperLog.e("Docker CLI not found, cannot execute command: \(commandString)")
+            throw NSError(
+                domain: "DockerError",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Docker CLI not found on this system"]
+            )
+        }
+
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = ["docker"] + arguments
+            process.executableURL = URL(fileURLWithPath: dockerPath)
+            process.arguments = arguments
 
             let pipe = Pipe()
+            let errorPipe = Pipe()
             process.standardOutput = pipe
-            process.standardError = Pipe()
+            process.standardError = errorPipe
 
             do {
                 try process.run()
@@ -828,11 +1428,20 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 let output = String(data: data, encoding: .utf8) ?? ""
 
                 if process.terminationStatus == 0 {
+                    SuperLog.d("Docker command succeeded: \(commandString) (output length: \(output.count) chars)")
                     continuation.resume(returning: output)
                 } else {
-                    continuation.resume(throwing: NSError(domain: "DockerError", code: Int(process.terminationStatus)))
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                    SuperLog.w("Docker command failed: \(commandString) - Exit code: \(process.terminationStatus), Error: \(errorOutput)")
+                    continuation.resume(throwing: NSError(
+                        domain: "DockerError",
+                        code: Int(process.terminationStatus),
+                        userInfo: [NSLocalizedDescriptionKey: "Docker command failed: \(errorOutput)"]
+                    ))
                 }
             } catch {
+                SuperLog.e("Failed to execute Docker command: \(commandString) - \(error.localizedDescription)")
                 continuation.resume(throwing: error)
             }
         }
@@ -875,5 +1484,21 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         }
 
         return Int64(value * multiplier)
+    }
+
+    /// Parse Docker date string to Date
+    /// Docker dates are in format: "2025-11-14 05:30:00 +0000 UTC"
+    private func parseDockerDate(_ dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z z"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        if let date = formatter.date(from: dateString) {
+            return date
+        }
+
+        // Try alternative format without timezone
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.date(from: dateString)
     }
 }

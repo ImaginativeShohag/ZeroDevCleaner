@@ -36,6 +36,7 @@ final class MockFileDeleter: FileDeleterProtocol, @unchecked Sendable {
     var deleteCalled: Bool = false
     var deletedFolders: [BuildFolder] = []
     var deletedURLs: [URL] = []
+    var deletedStaticItems: [StaticLocationSubItem] = []
     var shouldThrowError: Error?
 
     func delete(
@@ -69,6 +70,23 @@ final class MockFileDeleter: FileDeleterProtocol, @unchecked Sendable {
         // Simulate progress
         for i in 0..<urls.count {
             progressHandler?(i + 1, urls.count)
+        }
+    }
+
+    func delete(
+        staticItems: [StaticLocationSubItem],
+        progressHandler: DeletionProgressHandler?
+    ) async throws {
+        deleteCalled = true
+        deletedStaticItems = staticItems
+
+        if let error = shouldThrowError {
+            throw error
+        }
+
+        // Simulate progress
+        for i in 0..<staticItems.count {
+            progressHandler?(i + 1, staticItems.count)
         }
     }
 }
