@@ -9,6 +9,7 @@ import XCTest
 @testable import ZeroDevCleaner
 
 /// Integration tests for complete export/import workflow
+@MainActor
 final class SettingsExportImportIntegrationTests: XCTestCase {
     var exporter: SettingsExporter!
     var importer: SettingsImporter!

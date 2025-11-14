@@ -25,6 +25,7 @@ extension Key {
 ///     print("Changed from: \(old) to \(new)")
 /// }
 /// ```
+@MainActor
 public enum Preferences {
     @CodableUserDefault(key: .customCacheLocations)
     static var customCacheLocations: [CustomCacheLocation]?

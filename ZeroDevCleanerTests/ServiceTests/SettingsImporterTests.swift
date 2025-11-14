@@ -8,6 +8,7 @@
 import XCTest
 @testable import ZeroDevCleaner
 
+@MainActor
 final class SettingsImporterTests: XCTestCase {
     var sut: SettingsImporter!
     var tempDirectory: URL!

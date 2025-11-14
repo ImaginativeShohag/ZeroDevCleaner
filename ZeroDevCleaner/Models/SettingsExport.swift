@@ -50,7 +50,7 @@ struct SettingsExport: Codable {
 }
 
 /// Options for what to include in the export
-struct ExportOptions {
+struct ExportOptions: Sendable {
     var includeScanLocations: Bool
     var includeCustomCaches: Bool
 

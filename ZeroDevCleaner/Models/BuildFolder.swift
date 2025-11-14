@@ -73,4 +73,17 @@ struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
         let components = calendar.dateComponents([.day], from: lastModified, to: Date())
         return components.day ?? 0
     }
+
+    /// Returns relative path from a given root directory
+    func relativePath(from root: URL) -> String {
+        let pathComponents = path.pathComponents
+        let rootComponents = root.pathComponents
+
+        guard pathComponents.starts(with: rootComponents) else {
+            return path.path
+        }
+
+        let relativeComponents = pathComponents.dropFirst(rootComponents.count)
+        return relativeComponents.joined(separator: "/")
+    }
 }

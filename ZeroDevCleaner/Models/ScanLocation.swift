@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a saved scan location that can be scanned automatically
-struct ScanLocation: Identifiable, Codable, Hashable {
+struct ScanLocation: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var name: String
     var path: URL
