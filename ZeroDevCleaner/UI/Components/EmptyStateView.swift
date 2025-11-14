@@ -222,12 +222,11 @@ struct EmptyStateView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal)
 
-                // Statistics Section
-                if !allSessions.isEmpty {
-                    Divider()
-                        .padding(.vertical, 20)
+                // Statistics Section - Always visible
+                Divider()
+                    .padding(.vertical, 20)
 
-                    VStack(spacing: 20) {
+                VStack(spacing: 20) {
                         // Summary Cards Grid
                         HStack(spacing: 16) {
                             StatsSummaryCard(
@@ -402,7 +401,6 @@ struct EmptyStateView: View {
                         }
                     }
                     .padding(.bottom, 20)
-                }
             }
         }
         .onAppear {
