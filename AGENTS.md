@@ -111,6 +111,7 @@ Examples:
 
 ### Current Status
 - Core app complete and functional
+- **Configuration-driven build folder detection** with comprehensive UI
 - **90+ tests passing** (all unit and integration tests)
 - Zero build warnings
 - Ready for production use
