@@ -30,6 +30,9 @@ struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
     /// Whether this folder is selected for deletion
     var isSelected: Bool
 
+    /// Nested sub-folders (recursive hierarchy support)
+    var subItems: [BuildFolder]
+
     /// Initializer with all properties
     init(
         id: UUID = UUID(),
@@ -38,7 +41,8 @@ struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
         size: Int64,
         projectName: String,
         lastModified: Date,
-        isSelected: Bool = false
+        isSelected: Bool = false,
+        subItems: [BuildFolder] = []
     ) {
         self.id = id
         self.path = path
@@ -47,6 +51,7 @@ struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
         self.projectName = projectName
         self.lastModified = lastModified
         self.isSelected = isSelected
+        self.subItems = subItems
     }
 
     /// Human-readable size (e.g., "125.5 MB")
@@ -85,5 +90,32 @@ struct BuildFolder: Identifiable, Hashable, Codable, Sendable {
 
         let relativeComponents = pathComponents.dropFirst(rootComponents.count)
         return relativeComponents.joined(separator: "/")
+    }
+
+    /// Total count including all nested sub-items recursively
+    var totalCount: Int {
+        1 + subItems.reduce(0) { $0 + $1.totalCount }
+    }
+
+    /// Total size including all nested sub-items (should already be included in parent size, but kept for clarity)
+    var totalSizeIncludingSubItems: Int64 {
+        size + subItems.reduce(0) { $0 + $1.size }
+    }
+
+    /// Count of selected items recursively
+    var selectedCount: Int {
+        let selfCount = isSelected ? 1 : 0
+        let childCount = subItems.reduce(0) { $0 + $1.selectedCount }
+        return selfCount + childCount
+    }
+
+    /// Whether this folder has any sub-items
+    var hasSubItems: Bool {
+        !subItems.isEmpty
+    }
+
+    /// All folder IDs in the hierarchy (for expansion state)
+    var allFolderIds: [UUID] {
+        [id] + subItems.flatMap { $0.allFolderIds }
     }
 }

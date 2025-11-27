@@ -580,12 +580,69 @@ final class MainViewModel {
     }
 
     /// Toggles selection for a specific folder
-    func toggleSelection(for folder: BuildFolder) {
-        if let index = scanResults.firstIndex(where: { $0.id == folder.id }) {
-            scanResults[index].isSelected.toggle()
-            // Invalidate cache to ensure UI updates
-            invalidateSortCache()
+    // MARK: - Build Folder Selection (Recursive)
+
+    /// Toggle selection for a build folder (cascades to all children recursively)
+    func toggleBuildFolderSelection(for folder: BuildFolder) {
+        guard let index = findFolderIndex(folder.id, in: scanResults) else { return }
+
+        // Toggle based on path
+        toggleFolderAtPath(index, in: &scanResults)
+
+        // Invalidate cache to ensure UI updates
+        invalidateSortCache()
+    }
+
+    /// Find folder index recursively
+    private func findFolderIndex(_ id: UUID, in folders: [BuildFolder], path: [Int] = []) -> [Int]? {
+        for (index, folder) in folders.enumerated() {
+            if folder.id == id {
+                return path + [index]
+            }
+            if let subPath = findFolderIndex(id, in: folder.subItems, path: path + [index]) {
+                return subPath
+            }
         }
+        return nil
+    }
+
+    /// Toggle folder selection at given path
+    private func toggleFolderAtPath(_ path: [Int], in folders: inout [BuildFolder]) {
+        guard !path.isEmpty else { return }
+
+        if path.count == 1 {
+            // Top-level folder
+            folders[path[0]].isSelected.toggle()
+            toggleAllChildren(in: &folders[path[0]].subItems, to: folders[path[0]].isSelected)
+        } else {
+            // Nested folder - recursively navigate and toggle
+            toggleNestedFolderAtPath(path, in: &folders, currentIndex: 0)
+        }
+    }
+
+    /// Helper to recursively navigate and toggle nested folders
+    private func toggleNestedFolderAtPath(_ path: [Int], in folders: inout [BuildFolder], currentIndex: Int) {
+        if currentIndex == path.count - 1 {
+            // We've reached the target folder
+            folders[path[currentIndex]].isSelected.toggle()
+            toggleAllChildren(in: &folders[path[currentIndex]].subItems, to: folders[path[currentIndex]].isSelected)
+        } else {
+            // Navigate deeper
+            toggleNestedFolderAtPath(path, in: &folders[path[currentIndex]].subItems, currentIndex: currentIndex + 1)
+        }
+    }
+
+    /// Recursively toggle all children
+    private func toggleAllChildren(in folders: inout [BuildFolder], to isSelected: Bool) {
+        for i in folders.indices {
+            folders[i].isSelected = isSelected
+            toggleAllChildren(in: &folders[i].subItems, to: isSelected)
+        }
+    }
+
+    /// Legacy method for backward compatibility
+    func toggleSelection(for folder: BuildFolder) {
+        toggleBuildFolderSelection(for: folder)
     }
 
     /// Reveals the folder in Finder
@@ -598,31 +655,82 @@ final class MainViewModel {
 
     /// Selects all folders (in current filter view)
     func selectAll() {
-        let filteredIds = Set(filteredResults.map(\.id))
-        for index in scanResults.indices {
-            if filteredIds.contains(scanResults[index].id) {
-                scanResults[index].isSelected = true
-            }
-        }
+        let filteredIds = Set(collectAllFolderIds(from: filteredResults))
+        selectAllRecursive(in: &scanResults, matching: filteredIds)
         // Invalidate cache to ensure UI updates
         invalidateSortCache()
+    }
+
+    /// Select all matching folders recursively
+    private func selectAllRecursive(in folders: inout [BuildFolder], matching ids: Set<UUID>) {
+        for i in folders.indices {
+            if ids.contains(folders[i].id) {
+                folders[i].isSelected = true
+            }
+            selectAllRecursive(in: &folders[i].subItems, matching: ids)
+        }
     }
 
     /// Deselects all folders (in current filter view)
     func deselectAll() {
-        let filteredIds = Set(filteredResults.map(\.id))
-        for index in scanResults.indices {
-            if filteredIds.contains(scanResults[index].id) {
-                scanResults[index].isSelected = false
-            }
-        }
+        let filteredIds = Set(collectAllFolderIds(from: filteredResults))
+        deselectAllRecursive(in: &scanResults, matching: filteredIds)
         // Invalidate cache to ensure UI updates
         invalidateSortCache()
     }
 
-    /// Returns currently selected folders
+    /// Deselect all matching folders recursively
+    private func deselectAllRecursive(in folders: inout [BuildFolder], matching ids: Set<UUID>) {
+        for i in folders.indices {
+            if ids.contains(folders[i].id) {
+                folders[i].isSelected = false
+            }
+            deselectAllRecursive(in: &folders[i].subItems, matching: ids)
+        }
+    }
+
+    /// Collect all folder IDs recursively (including children)
+    private func collectAllFolderIds(from folders: [BuildFolder]) -> [UUID] {
+        var ids: [UUID] = []
+        for folder in folders {
+            ids.append(folder.id)
+            ids.append(contentsOf: collectAllFolderIds(from: folder.subItems))
+        }
+        return ids
+    }
+
+    /// Remove a folder by ID recursively from the folder tree
+    private func removeFolderRecursively(_ id: UUID, from folders: inout [BuildFolder]) {
+        // Try to remove at top level
+        if let index = folders.firstIndex(where: { $0.id == id }) {
+            folders.remove(at: index)
+            return
+        }
+
+        // Recursively search in children
+        for i in folders.indices {
+            removeFolderRecursively(id, from: &folders[i].subItems)
+        }
+    }
+
+    /// Returns currently selected folders (only top-level, excludes children of selected parents)
     var selectedFolders: [BuildFolder] {
-        scanResults.filter(\.isSelected)
+        collectTopLevelSelectedFolders(from: scanResults)
+    }
+
+    /// Recursively collect only top-level selected folders (don't include children if parent is selected)
+    private func collectTopLevelSelectedFolders(from folders: [BuildFolder]) -> [BuildFolder] {
+        var selected: [BuildFolder] = []
+        for folder in folders {
+            if folder.isSelected {
+                // Parent is selected - include it but don't traverse children
+                selected.append(folder)
+            } else {
+                // Parent not selected - check children
+                selected.append(contentsOf: collectTopLevelSelectedFolders(from: folder.subItems))
+            }
+        }
+        return selected
     }
 
     /// Returns currently selected static locations (parent level or sub-items)
@@ -654,7 +762,12 @@ final class MainViewModel {
 
     /// Total number of folders found
     var totalFoldersCount: Int {
-        scanResults.count
+        countAllFolders(in: scanResults)
+    }
+
+    /// Recursively count all folders including nested ones
+    private func countAllFolders(in folders: [BuildFolder]) -> Int {
+        folders.reduce(0) { $0 + 1 + countAllFolders(in: $1.subItems) }
     }
 
     /// Get count for a specific filter type
@@ -667,7 +780,7 @@ final class MainViewModel {
         return filterManager.sortedFilterTypes(for: scanResults)
     }
 
-    /// Total size of all folders
+    /// Total size of all folders (only count top-level to avoid double-counting in hierarchies)
     var totalSpaceSize: Int64 {
         scanResults.reduce(0) { $0 + $1.size }
     }
@@ -768,9 +881,7 @@ final class MainViewModel {
 
                 // All deletions succeeded - remove all deleted items from results
                 for folder in foldersToDelete {
-                    if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
-                        self.scanResults.remove(at: index)
-                    }
+                    removeFolderRecursively(folder.id, from: &self.scanResults)
                 }
 
                 for location in staticToDelete {
@@ -806,9 +917,7 @@ final class MainViewModel {
                     // Remove only successfully deleted folders
                     let successfulFolders = foldersToDelete.filter { !failedSet.contains($0.path) }
                     for folder in successfulFolders {
-                        if let index = self.scanResults.firstIndex(where: { $0.id == folder.id }) {
-                            self.scanResults.remove(at: index)
-                        }
+                        removeFolderRecursively(folder.id, from: &self.scanResults)
                     }
 
                     // Remove only successfully deleted static locations

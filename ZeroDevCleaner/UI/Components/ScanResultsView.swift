@@ -13,6 +13,7 @@ struct ScanResultsView: View {
     let onDone: () -> Void
     @State private var expandedStaticLocations: Set<UUID> = []
     @State private var expandedSubItems: Set<UUID> = [] // For nested items like archive app groups
+    @State private var expandedBuildFolders: Set<UUID> = [] // For hierarchical build folders (default: all expanded)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -222,90 +223,71 @@ struct ScanResultsView: View {
 
             Divider()
 
-            // Results Table
-            Table(viewModel.sortedAndFilteredResults) {
-                TableColumn("") { folder in
-                    Button {
-                        viewModel.toggleSelection(for: folder)
-                    } label: {
-                        Image(systemName: folder.isSelected ? "checkmark.square.fill" : "square")
-                            .foregroundStyle(.primary)
-                            .font(.system(size: 14))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .width(40)
+            // Column Headers (matching two-row layout)
+            HStack(spacing: 8) {
+                // Checkbox column
+                Text("")
+                    .frame(width: 40)
 
-                TableColumn("Project") { folder in
-                    HStack {
-                        Image(systemName: folder.projectType.iconName)
-                            .foregroundStyle(folder.projectType.color)
-                        Text(folder.projectName)
-                    }
-                }
-                .width(min: 150, ideal: 200, max: 300)
-                .customizationID("project")
+                // Project Column
+                Text("Project")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 150, maxWidth: 250, alignment: .leading)
 
-                TableColumn("Type") { folder in
-                    HStack(spacing: 4) {
-                        Text(folder.projectType.displayName)
-                        Text("(\(folder.projectType.buildFolderName))")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .width(min: 100, ideal: 120)
-                .customizationID("type")
-
-                TableColumn("Size") { folder in
-                    Text(folder.formattedSize)
-                        .monospacedDigit()
-                }
-                .width(min: 80, ideal: 100)
-                .customizationID("size")
-
-                TableColumn("Last Modified") { folder in
-                    HStack(spacing: 4) {
-                        if folder.isOld {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                                .font(.caption)
-                                .help("Not modified in \(folder.daysSinceModification) days")
-                        }
-                        Text(folder.formattedLastModified)
-                    }
-                }
-                .width(min: 120, ideal: 150)
-                .customizationID("lastModified")
-
-                TableColumn("Path") { folder in
-                    Text(folder.path.path)
+                // Right side headers
+                HStack(spacing: 12) {
+                    Text("Type")
                         .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .width(min: 200)
-            }
-            .contextMenu(forSelectionType: BuildFolder.ID.self) { items in
-                if let itemId = items.first,
-                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId })
-                {
-                    Button("Show in Finder") {
-                        onShowInFinder(folder)
-                    }
+                        .frame(minWidth: 100, alignment: .leading)
 
-                    Button("Copy Path") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(folder.path.path, forType: .string)
+                    Text("Size")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 80, alignment: .trailing)
+
+                    Text("Last Modified")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 100, alignment: .leading)
+
+                    Spacer()
+
+                    Text("")
+                        .frame(width: 24)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            // Hierarchical Results List
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: []) {
+                    ForEach(viewModel.sortedAndFilteredResults) { folder in
+                        BuildFolderRowView(
+                            folder: folder,
+                            isExpanded: expandedBuildFolders.contains(folder.id),
+                            expandedFolders: $expandedBuildFolders,
+                            onToggleSelection: { viewModel.toggleBuildFolderSelection(for: folder) },
+                            onToggleExpansion: { toggleBuildFolderExpansion(for: folder.id) },
+                            onShowInFinder: onShowInFinder,
+                            viewModel: viewModel,
+                            level: 0
+                        )
                     }
                 }
-            } primaryAction: { items in
-                // Double-click action
-                if let itemId = items.first,
-                   let folder = viewModel.sortedAndFilteredResults.first(where: { $0.id == itemId })
-                {
-                    onShowInFinder(folder)
-                }
+            }
+            .onAppear {
+                // Expand all by default when results appear
+                expandAllBuildFolders()
             }
 
             // Sort Controls
@@ -943,6 +925,259 @@ struct ScanResultsView: View {
         } else {
             return "square"
         }
+    }
+
+    // MARK: - Build Folder Expansion Helpers
+
+    private func toggleBuildFolderExpansion(for folderId: UUID) {
+        if expandedBuildFolders.contains(folderId) {
+            expandedBuildFolders.remove(folderId)
+        } else {
+            expandedBuildFolders.insert(folderId)
+        }
+    }
+
+    /// Expand all build folders recursively by default
+    private func expandAllBuildFolders() {
+        expandedBuildFolders = Set(
+            viewModel.sortedAndFilteredResults.flatMap { folder in
+                folder.allFolderIds
+            }
+        )
+    }
+
+    /// Check if all folders are expanded
+    private var allBuildFoldersExpanded: Bool {
+        let allIds = Set(viewModel.sortedAndFilteredResults.flatMap { $0.allFolderIds })
+        return allIds.isSubset(of: expandedBuildFolders)
+    }
+
+    /// Collapse all build folders
+    private func collapseAllBuildFolders() {
+        expandedBuildFolders.removeAll()
+    }
+
+    // Helper to determine checkbox icon for build folder (with partial selection support)
+    private func getBuildFolderCheckboxIcon(for folder: BuildFolder) -> String {
+        if folder.isSelected {
+            return "checkmark.square.fill"
+        } else if folder.hasPartialSelection {
+            return "minus.square.fill" // Partial selection
+        } else {
+            return "square"
+        }
+    }
+}
+
+// MARK: - BuildFolderRowView (Recursive Component)
+
+private struct BuildFolderRowView: View {
+    let folder: BuildFolder
+    let isExpanded: Bool
+    @Binding var expandedFolders: Set<UUID>
+    let onToggleSelection: () -> Void
+    let onToggleExpansion: () -> Void
+    let onShowInFinder: (BuildFolder) -> Void
+    let viewModel: MainViewModel  // Added to allow independent child selection
+    let level: Int
+
+    private var indentation: CGFloat {
+        CGFloat(level) * 24
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Two-row layout
+            HStack(alignment: .top, spacing: 8) {
+                // LEFT SIDE: Checkbox + Project (spans 2 rows)
+                HStack(alignment: .top, spacing: 8) {
+                    // Checkbox + Chevron column
+                    VStack(spacing: 0) {
+                        HStack(spacing: 4) {
+                            // Indentation
+                            if level > 0 {
+                                Spacer()
+                                    .frame(width: indentation)
+                            }
+
+                            // Chevron (if has children)
+                            if folder.hasSubItems {
+                                Button {
+                                    onToggleExpansion()
+                                } label: {
+                                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 12, height: 12)
+                                }
+                                .buttonStyle(.plain)
+                                .buttonHoverEffect()
+                            } else {
+                                Spacer().frame(width: 12)
+                            }
+
+                            // Checkbox
+                            Button {
+                                onToggleSelection()
+                            } label: {
+                                Image(systemName: checkboxIcon)
+                                    .foregroundStyle(.primary)
+                                    .font(.system(size: 14))
+                            }
+                            .buttonStyle(.plain)
+                            .buttonHoverEffect()
+                        }
+                        .frame(width: 40 + (level > 0 ? indentation : 0))
+
+                        Spacer()
+                    }
+
+                    // Project Column (spans both rows)
+                    HStack(spacing: 6) {
+                        Image(systemName: folder.projectType.iconName)
+                            .foregroundStyle(folder.projectType.color)
+                            .font(.system(size: 16))
+
+                        Text(folder.projectName)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(2)
+
+                        // Badge for sub-items count
+                        if folder.hasSubItems {
+                            Text("\(folder.subItems.count)")
+                                .font(.caption2)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.accentColor.opacity(0.15))
+                                .foregroundStyle(Color.accentColor)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .frame(minWidth: 150, maxWidth: 250, alignment: .leading)
+                }
+
+                // RIGHT SIDE: Type, Size, Last Modified (Row 1) + Path (Row 2)
+                VStack(alignment: .leading, spacing: 4) {
+                    // Row 1: Type, Size, Last Modified
+                    HStack(spacing: 12) {
+                        // Type
+                        HStack(spacing: 4) {
+                            Text(folder.projectType.displayName)
+                                .font(.system(size: 12))
+                            Text("(\(folder.projectType.buildFolderName))")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(minWidth: 100, alignment: .leading)
+
+                        // Size
+                        Text(folder.formattedSize)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .frame(minWidth: 80, alignment: .trailing)
+
+                        // Last Modified
+                        HStack(spacing: 4) {
+                            if folder.isOld {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.caption)
+                                    .help("Not modified in \(folder.daysSinceModification) days")
+                            }
+                            Text(folder.formattedLastModified)
+                                .font(.system(size: 11))
+                        }
+                        .foregroundStyle(.tertiary)
+                        .frame(minWidth: 100, alignment: .leading)
+
+                        Spacer()
+
+                        // Show in Finder button
+                        Button {
+                            onShowInFinder(folder)
+                        } label: {
+                            Image(systemName: "folder.fill")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.borderless)
+                        .buttonHoverEffect()
+                        .help("Show in Finder")
+                    }
+
+                    // Row 2: Path
+                    Text(folder.path.path)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(level % 2 == 0 ? 0 : 0.05))
+            .contentShape(Rectangle())
+            .contextMenu {
+                Button("Show in Finder") {
+                    onShowInFinder(folder)
+                }
+                Button("Copy Path") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(folder.path.path, forType: .string)
+                }
+            }
+
+            // Subtle separator
+            Divider()
+                .opacity(0.3)
+
+            // Recursive sub-items
+            if isExpanded && folder.hasSubItems {
+                ForEach(folder.subItems) { subFolder in
+                    BuildFolderRowView(
+                        folder: subFolder,
+                        isExpanded: expandedFolders.contains(subFolder.id),
+                        expandedFolders: $expandedFolders,
+                        onToggleSelection: {
+                            // Each child has independent selection via viewModel
+                            viewModel.toggleBuildFolderSelection(for: subFolder)
+                        },
+                        onToggleExpansion: {
+                            if expandedFolders.contains(subFolder.id) {
+                                expandedFolders.remove(subFolder.id)
+                            } else {
+                                expandedFolders.insert(subFolder.id)
+                            }
+                        },
+                        onShowInFinder: onShowInFinder,
+                        viewModel: viewModel,  // Pass viewModel to children
+                        level: level + 1
+                    )
+                }
+            }
+        }
+    }
+
+    private var checkboxIcon: String {
+        if folder.isSelected {
+            return "checkmark.square.fill"
+        } else if folder.hasPartialSelection {
+            return "minus.square.fill"
+        } else {
+            return "square"
+        }
+    }
+}
+
+// MARK: - BuildFolder Partial Selection Extension
+
+extension BuildFolder {
+    /// Whether this folder has some (but not all) children selected
+    var hasPartialSelection: Bool {
+        guard !isSelected, !subItems.isEmpty else { return false }
+        let selectedCount = subItems.filter { $0.isSelected || $0.hasPartialSelection }.count
+        return selectedCount > 0 && selectedCount < subItems.count
     }
 }
 

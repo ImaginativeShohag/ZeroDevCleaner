@@ -54,8 +54,11 @@ final class FileScanner: FileScannerProtocol {
             }
         }
 
-        SuperLog.i("Completed scan of \(url.path) - Found \(buildFolders.count) build folder(s)")
-        return buildFolders
+        // Structure into hierarchy
+        let hierarchicalFolders = structureHierarchy(from: buildFolders)
+
+        SuperLog.i("Completed scan of \(url.path) - Found \(hierarchicalFolders.count) top-level folders with nested structure")
+        return hierarchicalFolders
     }
 
     private func scanRecursively(
@@ -171,5 +174,80 @@ final class FileScanner: FileScannerProtocol {
         } catch {
             return nil
         }
+    }
+
+    /// Structures flat list of build folders into multi-level hierarchy
+    /// Folders are nested if their path is a subfolder of another folder's path
+    private func structureHierarchy(from folders: [BuildFolder]) -> [BuildFolder] {
+        SuperLog.i("Structuring \(folders.count) folders into hierarchy")
+
+        // Sort by path components count (shallowest first) to build from top down
+        let sortedFolders = folders.sorted { $0.path.pathComponents.count < $1.path.pathComponents.count }
+
+        // Track which folders have been added as children
+        var childPaths = Set<String>()
+
+        // Recursively build hierarchy
+        func buildChildren(for parentPath: String) -> [BuildFolder] {
+            var children: [BuildFolder] = []
+
+            for folder in sortedFolders {
+                let folderPath = folder.path.path
+
+                // Skip if already used as a child elsewhere
+                guard !childPaths.contains(folderPath) else { continue }
+
+                // Check if this folder is a direct or nested child of parent
+                guard folderPath != parentPath && folderPath.hasPrefix(parentPath + "/") else { continue }
+
+                // Mark as used
+                childPaths.insert(folderPath)
+
+                // Recursively build this folder's children
+                var childFolder = folder
+                childFolder.subItems = buildChildren(for: folderPath)
+
+                children.append(childFolder)
+            }
+
+            // Sort children: by path depth first (shallowest first), then alphabetically
+            return children.sorted { lhs, rhs in
+                let lhsDepth = lhs.path.pathComponents.count
+                let rhsDepth = rhs.path.pathComponents.count
+                if lhsDepth != rhsDepth {
+                    return lhsDepth < rhsDepth
+                }
+                return lhs.path.path < rhs.path.path
+            }
+        }
+
+        // Find top-level folders (not children of any other folder)
+        var topLevel: [BuildFolder] = []
+
+        for folder in sortedFolders {
+            let folderPath = folder.path.path
+
+            // Skip if already used as a child
+            guard !childPaths.contains(folderPath) else { continue }
+
+            // Check if this folder is a child of any other folder
+            let isChild = sortedFolders.contains { otherFolder in
+                let otherPath = otherFolder.path.path
+                return folderPath != otherPath && folderPath.hasPrefix(otherPath + "/")
+            }
+
+            if !isChild {
+                // This is a top-level folder
+                var topFolder = folder
+                topFolder.subItems = buildChildren(for: folderPath)
+                topLevel.append(topFolder)
+            }
+        }
+
+        // Sort top-level folders alphabetically by project name
+        let result = topLevel.sorted { $0.projectName < $1.projectName }
+
+        SuperLog.i("Structured into \(result.count) top-level folders")
+        return result
     }
 }
