@@ -112,29 +112,29 @@ final class FilterManager {
                 case .all:
                     return true
                 case .android:
-                    return folder.projectType == .android
+                    return folder.projectType.id == "android"
                 case .iOS:
-                    return folder.projectType == .iOS
+                    return folder.projectType.id == "iOS"
                 case .swiftPackage:
-                    return folder.projectType == .swiftPackage
+                    return folder.projectType.id == "swiftPackage"
                 case .flutter:
-                    return folder.projectType == .flutter
+                    return folder.projectType.id == "flutter"
                 case .nodeJS:
-                    return folder.projectType == .nodeJS
+                    return folder.projectType.id == "nodeJS"
                 case .rust:
-                    return folder.projectType == .rust
+                    return folder.projectType.id == "rust"
                 case .python:
-                    return folder.projectType == .python
+                    return folder.projectType.id == "python"
                 case .go:
-                    return folder.projectType == .go
+                    return folder.projectType.id == "go"
                 case .javaMaven:
-                    return folder.projectType == .javaMaven
+                    return folder.projectType.id == "javaMaven"
                 case .ruby:
-                    return folder.projectType == .ruby
+                    return folder.projectType.id == "ruby"
                 case .dotNet:
-                    return folder.projectType == .dotNet
+                    return folder.projectType.id == "dotNet"
                 case .unity:
-                    return folder.projectType == .unity
+                    return folder.projectType.id == "unity"
                 }
             }
         }
@@ -211,29 +211,29 @@ final class FilterManager {
             case .all:
                 return true
             case .android:
-                return folder.projectType == .android
+                return folder.projectType.id == "android"
             case .iOS:
-                return folder.projectType == .iOS
+                return folder.projectType.id == "iOS"
             case .swiftPackage:
-                return folder.projectType == .swiftPackage
+                return folder.projectType.id == "swiftPackage"
             case .flutter:
-                return folder.projectType == .flutter
+                return folder.projectType.id == "flutter"
             case .nodeJS:
-                return folder.projectType == .nodeJS
+                return folder.projectType.id == "nodeJS"
             case .rust:
-                return folder.projectType == .rust
+                return folder.projectType.id == "rust"
             case .python:
-                return folder.projectType == .python
+                return folder.projectType.id == "python"
             case .go:
-                return folder.projectType == .go
+                return folder.projectType.id == "go"
             case .javaMaven:
-                return folder.projectType == .javaMaven
+                return folder.projectType.id == "javaMaven"
             case .ruby:
-                return folder.projectType == .ruby
+                return folder.projectType.id == "ruby"
             case .dotNet:
-                return folder.projectType == .dotNet
+                return folder.projectType.id == "dotNet"
             case .unity:
-                return folder.projectType == .unity
+                return folder.projectType.id == "unity"
             }
         }.count
     }

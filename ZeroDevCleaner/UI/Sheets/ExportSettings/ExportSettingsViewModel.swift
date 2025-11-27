@@ -14,6 +14,7 @@ import UniformTypeIdentifiers
 final class ExportSettingsViewModel {
     var includeScanLocations = true
     var includeCustomCaches = true
+    var includeBuildFolderConfiguration = true
     var isExporting = false
     var errorMessage: String?
     var showSuccessAlert = false
@@ -27,12 +28,13 @@ final class ExportSettingsViewModel {
     var exportOptions: ExportOptions {
         ExportOptions(
             includeScanLocations: includeScanLocations,
-            includeCustomCaches: includeCustomCaches
+            includeCustomCaches: includeCustomCaches,
+            includeBuildFolderConfiguration: includeBuildFolderConfiguration
         )
     }
 
     var hasAtLeastOneOption: Bool {
-        includeScanLocations || includeCustomCaches
+        includeScanLocations || includeCustomCaches || includeBuildFolderConfiguration
     }
 
     var previewText: String {

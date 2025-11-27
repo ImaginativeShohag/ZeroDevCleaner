@@ -117,7 +117,13 @@ Examples:
 
 ### Key Features
 - Multi-location scanning with persistent settings
-- **Settings export/import** - Backup and restore scan locations and custom caches across devices
+- **Configuration-driven build folder detection** - Dynamic project type detection loaded from JSON configuration
+  - Sequential order-based detection with claim-once logic
+  - 4 validation modes: alwaysValid, parentDirectory, parentHierarchy, directoryEnumeration
+  - Flexible file requirements with anyOf/allOf logic
+  - User-editable configuration (future: UI for adding custom project types)
+  - Export/import configuration with settings (v2.0)
+- **Settings export/import** - Backup and restore scan locations, custom caches, and build folder configuration across devices
 - **Custom cache locations** - Add/edit/delete user-defined cache paths with pattern matching, color coding, and validation
 - Static cache location detection (9 types)
 - Tabbed interface (Build Folders / System Caches)
@@ -186,6 +192,114 @@ Examples:
     - Falls back to directory scan if Docker is not running
     - Shows meaningful resource breakdown instead of just folder size
 14. System Cache (macOS)
+
+## Configuration System Architecture
+
+### Overview
+The build folder detection system is **configuration-driven**, allowing dynamic project type definitions without code changes. Project types are loaded from a JSON configuration file at runtime.
+
+### Key Components
+
+#### 1. Configuration Files
+- **Bundled Config**: `ZeroDevCleaner/Resources/DefaultBuildFolderTypes.json`
+  - Read-only default configuration embedded in app bundle
+  - Used for initialization and reset to defaults
+  - Contains all 12 built-in project types
+- **User Config**: `~/Library/Application Support/ZeroDevCleaner/BuildFolderTypes.json`
+  - Single source of truth for active configuration
+  - User-editable (future: UI for management)
+  - Automatically created from bundled config on first launch
+
+#### 2. Data Models (`BuildFolderConfiguration.swift`)
+- **BuildFolderConfiguration**: Root configuration structure with version and project types
+- **ProjectTypeConfig**: Individual project type definition (id, display name, icon, color, folder names, validation rules)
+- **ValidationRules**: Validation requirements with 4 modes
+- **ValidationMode**: Enum defining validation strategies
+  - `alwaysValid`: No validation required (e.g., generic build folders)
+  - `parentDirectory`: Check for specific files/directories in parent
+  - `parentHierarchy`: Search up directory tree with max depth
+  - `directoryEnumeration`: Look for file extensions in parent directory tree
+- **FileRequirement**: Flexible file matching with anyOf/allOf logic
+- **DirectoryRequirement**: Directory matching with anyOf/allOf logic
+
+#### 3. ConfigurationManager (`ConfigurationManager.swift`)
+`@MainActor` singleton managing configuration lifecycle:
+- **initialize()**: Copy bundled config to user location on first launch
+- **loadConfiguration()**: Load active config from user file
+- **saveConfiguration()**: Save config to user file
+- **resetToDefaults()**: Restore bundled defaults
+- **exportConfiguration()**: Export as JSON data
+- **importConfiguration()**: Import and validate JSON data
+- **validateConfiguration()**: Check configuration correctness
+
+#### 4. ProjectValidator (`ProjectValidator.swift`)
+Rule-based validation engine:
+- **detectProjectType(buildFolder:projectTypes:)**: Main detection method
+  - Checks folder name against configured folder names
+  - Validates using appropriate validation mode
+  - Returns first match (sequential order matters)
+- **validateProjectType()**: Routes to mode-specific validator
+- Mode-specific validators:
+  - `validateParentDirectory()`: Direct parent check
+  - `validateParentHierarchy()`: Recursive parent traversal with depth limit
+  - `validateDirectoryEnumeration()`: File extension search in parent tree
+
+#### 5. FileScanner Integration
+Sequential claim-once detection logic:
+- Load configuration at scan start
+- Track claimed folders in Set
+- Skip folders already claimed by previous project types
+- First match wins (configuration order = priority)
+
+### Configuration Format
+
+```json
+{
+  "version": "1.0",
+  "projectTypes": [
+    {
+      "id": "swiftPackage",
+      "displayName": "Swift Package",
+      "iconName": "shippingbox.fill",
+      "color": "#FF9500",
+      "folderNames": [".build"],
+      "validation": {
+        "mode": "parentHierarchy",
+        "maxSearchDepth": 2,
+        "requiredFiles": {
+          "anyOf": ["Package.swift"]
+        }
+      }
+    }
+  ]
+}
+```
+
+### Sequential Detection Rules
+1. Configuration order determines detection priority
+2. More specific folder names should come first (e.g., `.build` before `build`)
+3. Each build folder can only be claimed by one project type
+4. Once matched, folder is excluded from subsequent checks
+5. First valid match wins
+
+### Export/Import Integration
+- Settings export v2.0 includes build folder configuration
+- Backward compatible with v1.0 (configuration optional)
+- Configuration exported as optional field in SettingsExport
+- Import validates configuration before applying
+
+### Testing Strategy
+- Mock configurations for isolated testing
+- Test each validation mode independently
+- Test sequential detection order
+- Test claim-once logic
+- Test configuration validation
+
+### Future Enhancements
+- UI for adding/editing project types (ProjectTypesSettingsSheet)
+- UI for editing individual project types (ProjectTypeEditorSheet)
+- Configuration validation in UI with error messages
+- Configuration templates for common project types
 
 ## For AI Agents
 

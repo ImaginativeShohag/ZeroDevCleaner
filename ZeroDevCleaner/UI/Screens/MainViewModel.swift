@@ -161,7 +161,7 @@ final class MainViewModel {
             case .projectName:
                 result = lhs.projectName.localizedStandardCompare(rhs.projectName) == .orderedAscending
             case .type:
-                result = lhs.projectType.rawValue < rhs.projectType.rawValue
+                result = lhs.projectType.displayName < rhs.projectType.displayName
             case .size:
                 result = lhs.size < rhs.size
             case .lastModified:
@@ -311,6 +311,12 @@ final class MainViewModel {
             // Scan configured locations
             if !locations.isEmpty {
                 for (index, location) in locations.enumerated() {
+                    // Check for cancellation before processing each location
+                    if Task.isCancelled {
+                        SuperLog.i("Scan cancelled during location scan")
+                        return
+                    }
+
                     SuperLog.i("Scanning location \(index + 1)/\(locations.count): \(location.path.path)")
 
                     do {
@@ -349,6 +355,12 @@ final class MainViewModel {
                 scanProgress = 0.8
             }
 
+            // Check for cancellation before static scan
+            if Task.isCancelled {
+                SuperLog.i("Scan cancelled before static scan")
+                return
+            }
+
             // Scan static locations (system caches)
             do {
                 SuperLog.i("Scanning system caches")
@@ -372,12 +384,24 @@ final class MainViewModel {
                 // Continue even if static scan fails
             }
 
+            // Check for cancellation before custom cache scan
+            if Task.isCancelled {
+                SuperLog.i("Scan cancelled before custom cache scan")
+                return
+            }
+
             // Scan custom cache locations
             let enabledCustomCaches = CustomCacheManager.shared.enabledLocations
             if !enabledCustomCaches.isEmpty {
                 SuperLog.i("Scanning \(enabledCustomCaches.count) custom cache locations")
 
                 for (index, customCache) in enabledCustomCaches.enumerated() {
+                    // Check for cancellation before processing each custom cache
+                    if Task.isCancelled {
+                        SuperLog.i("Scan cancelled during custom cache scan")
+                        return
+                    }
+
                     do {
                         self.currentScanPath = customCache.path.path
 
@@ -404,6 +428,12 @@ final class MainViewModel {
             // Mark scan as complete (100%)
             self.scanProgress = 1.0
 
+            // Check if task was cancelled
+            if Task.isCancelled {
+                SuperLog.i("Scan task was cancelled, not showing results")
+                return
+            }
+
             // Pre-sort results in background to avoid UI freeze
             let sortedResults = await Task.detached {
                 return allBuildFolders.sorted { lhs, rhs in
@@ -411,6 +441,12 @@ final class MainViewModel {
                     return lhs.size > rhs.size
                 }
             }.value
+
+            // Check again before updating UI (task might have been cancelled during sort)
+            if Task.isCancelled {
+                SuperLog.i("Scan task was cancelled during sorting, not showing results")
+                return
+            }
 
             // Update results (already sorted for initial display)
             self.scanResults = sortedResults
@@ -425,35 +461,23 @@ final class MainViewModel {
 
             let totalFound = allBuildFolders.count + self.staticLocations.filter(\.exists).count
             SuperLog.i("Scan complete. Found \(allBuildFolders.count) build folders and \(self.staticLocations.filter(\.exists).count) system caches")
-
-            if totalFound == 0 {
-                SuperLog.i("No items found in any location")
-                self.currentError = .scanCancelled
-                self.showError = true
-            }
         }
     }
 
     /// Cancels the current scan
     func cancelScan() {
-        // Only log and show errors if we were actually scanning
-        let wasScanning = isScanning
+        guard isScanning else { return }
 
-        if wasScanning {
-            SuperLog.i("Cancelling scan")
-        }
+        SuperLog.i("Cancelling scan")
 
         scanTask?.cancel()
         scanTask = nil
         isScanning = false
+        isScanningStatic = false
+        scanProgress = 0.0
+        currentScanPath = ""
 
-        // Only show cancelled error if we were actually scanning and have no results
-        if wasScanning && scanResults.isEmpty {
-            currentError = .scanCancelled
-            showError = true
-        } else if wasScanning {
-            SuperLog.i("Scan cancelled. Showing \(self.scanResults.count) partial results")
-        }
+        SuperLog.i("Scan cancelled successfully")
     }
 
     /// Toggles selection for a specific static location

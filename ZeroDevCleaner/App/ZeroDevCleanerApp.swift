@@ -33,9 +33,24 @@ struct ZeroDevCleanerApp: App {
         }
     }
 
+    /// Initialize configuration manager on first launch
+    private func initializeConfiguration() async {
+        do {
+            try await ConfigurationManager.shared.initialize()
+            SuperLog.i("Build folder configuration initialized successfully")
+        } catch {
+            SuperLog.e("Failed to initialize build folder configuration: \(error)")
+            // Error will be handled when user tries to scan
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             MainScreen()
+                .task {
+                    // Initialize configuration on app launch
+                    await initializeConfiguration()
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

@@ -1,0 +1,157 @@
+{
+  "version": "1.0",
+  "projectTypes": [
+    {
+      "id": "swiftPackage",
+      "displayName": "Swift Package",
+      "iconName": "shippingbox.fill",
+      "color": "#FF9500",
+      "folderNames": [".build"],
+      "validation": {
+        "mode": "parentHierarchy",
+        "maxSearchDepth": 2,
+        "requiredFiles": {
+          "anyOf": ["Package.swift"]
+        }
+      }
+    },
+    {
+      "id": "flutter",
+      "displayName": "Flutter",
+      "iconName": "wind",
+      "color": "#02569B",
+      "folderNames": ["build"],
+      "validation": {
+        "mode": "parentHierarchy",
+        "maxSearchDepth": 2,
+        "requiredFiles": {
+          "anyOf": ["pubspec.yaml"]
+        }
+      }
+    },
+    {
+      "id": "nodeJS",
+      "displayName": "Node.js",
+      "iconName": "atom",
+      "color": "#339933",
+      "folderNames": ["node_modules"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredFiles": {
+          "anyOf": ["package.json"]
+        }
+      }
+    },
+    {
+      "id": "javaMaven",
+      "displayName": "Java/Maven",
+      "iconName": "cup.and.saucer.fill",
+      "color": "#B07219",
+      "folderNames": ["target"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredFiles": {
+          "anyOf": ["pom.xml"]
+        }
+      }
+    },
+    {
+      "id": "rust",
+      "displayName": "Rust",
+      "iconName": "gearshape.2.fill",
+      "color": "#DEA584",
+      "folderNames": ["target"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredFiles": {
+          "anyOf": ["Cargo.toml"]
+        }
+      }
+    },
+    {
+      "id": "python",
+      "displayName": "Python",
+      "iconName": "chevron.left.forwardslash.chevron.right",
+      "color": "#FFD43B",
+      "folderNames": ["__pycache__", "venv", ".venv", "env", ".env"],
+      "validation": {
+        "mode": "alwaysValid"
+      }
+    },
+    {
+      "id": "go",
+      "displayName": "Go",
+      "iconName": "g.square.fill",
+      "color": "#00ADD8",
+      "folderNames": ["vendor"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredFiles": {
+          "anyOf": ["go.mod"]
+        }
+      }
+    },
+    {
+      "id": "ruby",
+      "displayName": "Ruby",
+      "iconName": "diamond.fill",
+      "color": "#CC342D",
+      "folderNames": ["vendor"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredFiles": {
+          "anyOf": ["Gemfile"]
+        }
+      }
+    },
+    {
+      "id": "dotNet",
+      "displayName": ".NET",
+      "iconName": "number.square.fill",
+      "color": "#512BD4",
+      "folderNames": ["bin", "obj"],
+      "validation": {
+        "mode": "directoryEnumeration",
+        "fileExtensions": ["csproj", "vbproj", "fsproj", "sln"]
+      }
+    },
+    {
+      "id": "unity",
+      "displayName": "Unity",
+      "iconName": "cube.transparent.fill",
+      "color": "#000000",
+      "folderNames": ["Library", "Temp"],
+      "validation": {
+        "mode": "parentDirectory",
+        "requiredDirectories": {
+          "allOf": ["Assets", "ProjectSettings"]
+        }
+      }
+    },
+    {
+      "id": "android",
+      "displayName": "Android",
+      "iconName": "app.badge.fill",
+      "color": "#3DDC84",
+      "folderNames": ["build"],
+      "validation": {
+        "mode": "parentHierarchy",
+        "maxSearchDepth": 5,
+        "requiredFiles": {
+          "anyOf": ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]
+        }
+      }
+    },
+    {
+      "id": "iOS",
+      "displayName": "iOS/Xcode",
+      "iconName": "apple.logo",
+      "color": "#007AFF",
+      "folderNames": ["build", ".build"],
+      "validation": {
+        "mode": "directoryEnumeration",
+        "fileExtensions": ["xcodeproj", "xcworkspace"]
+      }
+    }
+  ]
+}

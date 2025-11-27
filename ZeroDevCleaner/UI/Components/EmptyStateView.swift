@@ -360,19 +360,12 @@ struct EmptyStateView: View {
                                         ForEach(sortedProjects, id: \.projectType) { stats in
                                             HStack {
                                                 // Project type icon and name
-                                                if let projectType = ProjectType(rawValue: stats.projectType.lowercased()) {
-                                                    Image(systemName: projectType.iconName)
-                                                        .foregroundStyle(projectType.color)
-                                                        .frame(width: 20)
-                                                    Text(projectType.displayName)
-                                                        .font(.headline)
-                                                } else {
-                                                    Image(systemName: "folder.fill")
-                                                        .foregroundStyle(.gray)
-                                                        .frame(width: 20)
-                                                    Text(stats.projectType)
-                                                        .font(.headline)
-                                                }
+                                                // Display project type string directly since it's stored as ID
+                                                Image(systemName: "folder.fill")
+                                                    .foregroundStyle(.blue)
+                                                    .frame(width: 20)
+                                                Text(stats.projectType)
+                                                    .font(.headline)
 
                                                 Spacer()
 

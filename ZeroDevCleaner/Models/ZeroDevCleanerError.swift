@@ -25,6 +25,7 @@ enum ZeroDevCleanerError: LocalizedError, Sendable {
     case invalidExportFile
     case unsupportedVersion(String)
     case noSettingsToExport
+    case configurationLoadFailed(Error)
     case unknownError(Error)
 
     var errorDescription: String? {
@@ -76,6 +77,9 @@ enum ZeroDevCleanerError: LocalizedError, Sendable {
 
         case .noSettingsToExport:
             return "No Settings to Export"
+
+        case .configurationLoadFailed:
+            return "Configuration Load Failed"
 
         case .unknownError:
             return "An Unexpected Error Occurred"
@@ -134,6 +138,9 @@ enum ZeroDevCleanerError: LocalizedError, Sendable {
 
         case .noSettingsToExport:
             return "There are no settings configured to export.\n\nAdd some scan locations or custom cache locations before exporting."
+
+        case .configurationLoadFailed(let error):
+            return "Failed to load build folder type configuration.\n\nThe configuration file may be corrupted. Try resetting to defaults in Settings.\n\nDetails: \(error.localizedDescription)"
 
         case .unknownError(let error):
             return "An unexpected error occurred: \(error.localizedDescription)\n\nPlease try again. If the problem persists, try restarting the app."

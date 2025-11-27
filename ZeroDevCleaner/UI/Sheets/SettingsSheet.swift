@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsSheet: View {
     @Bindable var locationManager: ScanLocationManager
     @State private var customCacheManager = CustomCacheManager.shared
+    @State private var projectTypesViewModel = ProjectTypesSettingsViewModel()
     @State private var isDropTargeted = false
     @State private var selectedTab: SettingsTab = .scanLocations
     @State private var locationToRemove: ScanLocation?
@@ -21,11 +22,13 @@ struct SettingsSheet: View {
     enum SettingsTab: String, CaseIterable {
         case scanLocations = "Scan Locations"
         case customCaches = "Custom Caches"
+        case projectTypes = "Project Types"
 
         var icon: String {
             switch self {
             case .scanLocations: return "folder.fill"
             case .customCaches: return "folder.badge.gearshape"
+            case .projectTypes: return "hammer.fill"
             }
         }
     }
@@ -64,6 +67,8 @@ struct SettingsSheet: View {
                     scanLocationsView
                 case .customCaches:
                     customCachesView
+                case .projectTypes:
+                    projectTypesView
                 }
             }
 
@@ -96,7 +101,7 @@ struct SettingsSheet: View {
 
                 Spacer()
 
-                Text(selectedTab == .scanLocations ? "Drag & drop folders to add" : "Add custom cache directories")
+                Text(footerText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -111,7 +116,7 @@ struct SettingsSheet: View {
             }
             .padding()
         }
-        .frame(width: 700, height: 500)
+        .frame(width: 950, height: 650)
         .background(
             RoundedRectangle(cornerRadius: 0)
                 .fill(isDropTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
@@ -324,6 +329,25 @@ struct SettingsSheet: View {
                 path: url
             )
             locationManager.addLocation(location)
+        }
+    }
+
+    // MARK: - Project Types View
+
+    private var projectTypesView: some View {
+        ProjectTypesSettingsSheet(viewModel: projectTypesViewModel)
+    }
+
+    // MARK: - Helpers
+
+    private var footerText: String {
+        switch selectedTab {
+        case .scanLocations:
+            return "Drag & drop folders to add"
+        case .customCaches:
+            return "Add custom cache directories"
+        case .projectTypes:
+            return "Configure build folder detection rules"
         }
     }
 }

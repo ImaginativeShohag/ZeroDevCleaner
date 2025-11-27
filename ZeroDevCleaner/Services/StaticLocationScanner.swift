@@ -37,6 +37,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         var results: [StaticLocation] = []
 
         for (index, type) in types.enumerated() {
+            // Check for cancellation at the start of each iteration
+            try Task.checkCancellation()
+
             let path = type.defaultPath
 
             progressHandler?(path.path, index + 1)
@@ -59,6 +62,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 continue
             }
 
+            // Check for cancellation before expensive operations
+            try Task.checkCancellation()
+
             // Scan subfolders if supported (e.g., DerivedData, Archives, Device Support)
             var subItems: [StaticLocationSubItem] = []
             if type.supportsSubItems {
@@ -75,6 +81,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                     subItems = try await scanSubItems(at: path, type: type)
                 }
             }
+
+            // Check for cancellation before size calculation
+            try Task.checkCancellation()
 
             // Calculate size (but skip for Docker since we get it from sub-items)
             let size: Int64
@@ -123,6 +132,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             )
 
             for dateFolder in dateFolders {
+                // Check for cancellation in outer loop
+                try Task.checkCancellation()
+
                 let resourceValues = try dateFolder.resourceValues(forKeys: [.isDirectoryKey])
                 guard resourceValues.isDirectory == true else { continue }
 
@@ -134,6 +146,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 )
 
                 for archiveURL in archives {
+                    // Check for cancellation in inner loop
+                    try Task.checkCancellation()
+
                     guard archiveURL.pathExtension == "xcarchive" else { continue }
 
                     let archiveResourceValues = try archiveURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
@@ -217,6 +232,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
             )
 
             for versionFolder in versionFolders {
+                // Check for cancellation in outer loop
+                try Task.checkCancellation()
+
                 let resourceValues = try versionFolder.resourceValues(forKeys: [.isDirectoryKey])
                 guard resourceValues.isDirectory == true else { continue }
 
@@ -228,6 +246,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
                 )
 
                 for osVersionURL in osVersionFolders {
+                    // Check for cancellation in inner loop
+                    try Task.checkCancellation()
+
                     let osResourceValues = try osVersionURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
                     guard osResourceValues.isDirectory == true else { continue }
 
@@ -270,6 +291,9 @@ final class StaticLocationScanner: StaticLocationScannerProtocol, Sendable {
         )
 
         for itemURL in contents {
+            // Check for cancellation in loop
+            try Task.checkCancellation()
+
             let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
 
             // Only include directories

@@ -62,10 +62,12 @@ final class SettingsImporter: SettingsImporterProtocol {
         case .merge:
             mergeScanLocations(export.scanLocations)
             mergeCustomCacheLocations(export.customCacheLocations)
+            await mergeBuildFolderConfiguration(export.buildFolderConfiguration)
 
         case .replace:
             replaceScanLocations(export.scanLocations)
             replaceCustomCacheLocations(export.customCacheLocations)
+            await replaceBuildFolderConfiguration(export.buildFolderConfiguration)
         }
     }
 
@@ -107,5 +109,30 @@ final class SettingsImporter: SettingsImporterProtocol {
     /// Replaces all existing custom cache locations with imported ones
     private func replaceCustomCacheLocations(_ imported: [CustomCacheLocation]) {
         Preferences.customCacheLocations = imported.isEmpty ? nil : imported
+    }
+
+    /// Merges imported build folder configuration with existing one
+    /// For configuration, merge means keeping existing and ignoring import (user config is authoritative)
+    private func mergeBuildFolderConfiguration(_ imported: BuildFolderConfiguration?) async {
+        guard let imported else { return }
+
+        // In merge mode, we keep the existing user configuration
+        // This prevents accidental overwrites of user customizations
+        SuperLog.i("Merge mode: Keeping existing build folder configuration")
+
+        // Optionally, we could add imported project types that don't exist in current config
+        // But for simplicity, we just skip the import in merge mode
+    }
+
+    /// Replaces existing build folder configuration with imported one
+    private func replaceBuildFolderConfiguration(_ imported: BuildFolderConfiguration?) async {
+        guard let imported else { return }
+
+        do {
+            try await ConfigurationManager.shared.saveConfiguration(imported)
+            SuperLog.i("Build folder configuration replaced with imported config")
+        } catch {
+            SuperLog.e("Failed to import build folder configuration: \(error)")
+        }
     }
 }

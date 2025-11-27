@@ -7,29 +7,11 @@
 
 import Foundation
 
-/// Protocol for validating development project structures
+/// Protocol for validating development project structures using configuration
 protocol ProjectValidatorProtocol: Sendable {
-    /// Validates if a folder is part of an Android project
-    func isValidAndroidProject(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of an iOS/Xcode project
-    func isValidiOSProject(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of a Swift Package
-    func isValidSwiftPackage(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of a Flutter project
-    func isValidFlutterProject(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of a Node.js project
-    func isValidNodeJSProject(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of a Rust project
-    func isValidRustProject(buildFolder: URL) -> Bool
-
-    /// Validates if a folder is part of a Python project
-    func isValidPythonProject(buildFolder: URL) -> Bool
-
-    /// Determines project type if valid, nil otherwise
-    func detectProjectType(buildFolder: URL) -> ProjectType?
+    /// Detects project type from build folder path using configuration
+    /// - Parameter buildFolder: URL to the build folder
+    /// - Parameter projectTypes: Array of project type configurations (in priority order)
+    /// - Returns: Matching ProjectType or nil if no match
+    func detectProjectType(buildFolder: URL, projectTypes: [ProjectTypeConfig]) -> ProjectType?
 }

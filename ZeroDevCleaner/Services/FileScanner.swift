@@ -13,6 +13,12 @@ final class FileScanner: FileScannerProtocol {
     private let sizeCalculator: FileSizeCalculatorProtocol
     private let maxDepth: Int
 
+    /// Folders that have been claimed by a project type (claim-once logic)
+    private var claimedFolders: Set<String> = []
+
+    /// Project type configurations loaded from ConfigurationManager
+    private var projectTypeConfigs: [ProjectTypeConfig] = []
+
     init(
         fileManager: FileManager = .default,
         validator: ProjectValidatorProtocol,
@@ -30,6 +36,19 @@ final class FileScanner: FileScannerProtocol {
         progressHandler: ScanProgressHandler?
     ) async throws -> [BuildFolder] {
         SuperLog.i("Starting scan of parent folder: \(url.path)")
+
+        // Load project type configuration
+        do {
+            let config = try await ConfigurationManager.shared.loadConfiguration()
+            self.projectTypeConfigs = config.projectTypes
+            SuperLog.i("Loaded \(self.projectTypeConfigs.count) project type configurations")
+        } catch {
+            SuperLog.e("Failed to load build folder configuration: \(error)")
+            throw ZeroDevCleanerError.configurationLoadFailed(error)
+        }
+
+        // Reset claimed folders for this scan
+        claimedFolders.removeAll()
 
         // Get the canonical root path to ensure we stay within bounds
         let rootPath = url.resolvingSymlinksInPath().path
@@ -69,6 +88,9 @@ final class FileScanner: FileScannerProtocol {
         group: inout ThrowingTaskGroup<BuildFolder?, Error>,
         progressHandler: ScanProgressHandler?
     ) async throws {
+        // Check for cancellation at the start of each recursive call
+        try Task.checkCancellation()
+
         guard currentDepth < maxDepth else { return }
 
         // Security check: Ensure we're still within the root directory
@@ -87,6 +109,9 @@ final class FileScanner: FileScannerProtocol {
         )
 
         for itemURL in contents {
+            // Check for cancellation in the loop
+            try Task.checkCancellation()
+
             let resourceValues = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
 
             // CRITICAL: Skip symlinks FIRST before checking if it's a directory
@@ -107,40 +132,50 @@ final class FileScanner: FileScannerProtocol {
                 continue
             }
 
-            // Check if this is a build/cache folder
-            if folderName == "build" ||
-               folderName == ".build" ||
-               folderName == "node_modules" ||
-               folderName == "target" ||
-               folderName == "__pycache__" ||
-               folderName == "venv" ||
-               folderName == ".venv" ||
-               folderName == "env" ||
-               folderName == ".env" ||
-               folderName == "vendor" ||
-               folderName == "bin" ||
-               folderName == "obj" ||
-               folderName == "Library" ||
-               folderName == "Temp" {
-                if let projectType = validator.detectProjectType(buildFolder: itemURL) {
+            // CLAIM-ONCE LOGIC: Skip if this folder has already been claimed
+            let folderPath = itemURL.path
+            if claimedFolders.contains(folderPath) {
+                SuperLog.d("Skipping already-claimed folder: \(folderPath)")
+                continue
+            }
+
+            // Check if this folder matches any configured build folder names
+            let matchingConfigs = projectTypeConfigs.filter { $0.folderNames.contains(folderName) }
+
+            if !matchingConfigs.isEmpty {
+                // Try to detect project type using sequential validation
+                if let projectType = validator.detectProjectType(buildFolder: itemURL, projectTypes: projectTypeConfigs) {
+                    // Claim this folder so it won't be detected again
+                    claimedFolders.insert(folderPath)
+
                     group.addTask {
                         await self.createBuildFolder(url: itemURL, projectType: projectType)
                     }
                     await MainActor.run {
                         progressHandler?(itemURL.path, foundFolders.count + 1)
                     }
-                }
 
-                // Continue scanning inside detected build folders to find nested artifacts
-                // (e.g., Android build inside node_modules)
-                try await scanRecursively(
-                    url: itemURL,
-                    rootPath: rootPath,
-                    currentDepth: currentDepth + 1,
-                    foundFolders: &foundFolders,
-                    group: &group,
-                    progressHandler: progressHandler
-                )
+                    // Continue scanning inside detected build folders to find nested artifacts
+                    // (e.g., Android build inside node_modules)
+                    try await scanRecursively(
+                        url: itemURL,
+                        rootPath: rootPath,
+                        currentDepth: currentDepth + 1,
+                        foundFolders: &foundFolders,
+                        group: &group,
+                        progressHandler: progressHandler
+                    )
+                } else {
+                    // Folder name matches but validation failed - continue scanning inside
+                    try await scanRecursively(
+                        url: itemURL,
+                        rootPath: rootPath,
+                        currentDepth: currentDepth + 1,
+                        foundFolders: &foundFolders,
+                        group: &group,
+                        progressHandler: progressHandler
+                    )
+                }
             } else {
                 // Recursively scan subdirectories
                 try await scanRecursively(

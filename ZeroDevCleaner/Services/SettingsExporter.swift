@@ -35,15 +35,27 @@ final class SettingsExporter: SettingsExporterProtocol {
         let scanLocations = options.includeScanLocations ? (Preferences.scanLocations ?? []) : []
         let customCaches = options.includeCustomCaches ? (Preferences.customCacheLocations ?? []) : []
 
+        // Get build folder configuration if requested
+        var buildFolderConfig: BuildFolderConfiguration?
+        if options.includeBuildFolderConfiguration {
+            do {
+                buildFolderConfig = try await ConfigurationManager.shared.loadConfiguration()
+            } catch {
+                // Log error but continue with export (config is optional)
+                SuperLog.w("Failed to load build folder configuration for export: \(error)")
+            }
+        }
+
         // Validate that there are settings to export
-        guard !scanLocations.isEmpty || !customCaches.isEmpty else {
+        guard !scanLocations.isEmpty || !customCaches.isEmpty || buildFolderConfig != nil else {
             throw ZeroDevCleanerError.noSettingsToExport
         }
 
         // Create export object
         let export = SettingsExport(
             scanLocations: scanLocations,
-            customCacheLocations: customCaches
+            customCacheLocations: customCaches,
+            buildFolderConfiguration: buildFolderConfig
         )
 
         do {
@@ -64,17 +76,23 @@ final class SettingsExporter: SettingsExporterProtocol {
     /// Returns a preview of what will be exported without actually saving
     /// - Parameter options: Export options specifying what to include
     /// - Returns: SettingsExport object or nil if nothing to export
-    func previewExport(options: ExportOptions) -> SettingsExport? {
+    func previewExport(options: ExportOptions) async -> SettingsExport? {
         let scanLocations = options.includeScanLocations ? (Preferences.scanLocations ?? []) : []
         let customCaches = options.includeCustomCaches ? (Preferences.customCacheLocations ?? []) : []
 
-        guard !scanLocations.isEmpty || !customCaches.isEmpty else {
+        var buildFolderConfig: BuildFolderConfiguration?
+        if options.includeBuildFolderConfiguration {
+            buildFolderConfig = try? await ConfigurationManager.shared.loadConfiguration()
+        }
+
+        guard !scanLocations.isEmpty || !customCaches.isEmpty || buildFolderConfig != nil else {
             return nil
         }
 
         return SettingsExport(
             scanLocations: scanLocations,
-            customCacheLocations: customCaches
+            customCacheLocations: customCaches,
+            buildFolderConfiguration: buildFolderConfig
         )
     }
 }

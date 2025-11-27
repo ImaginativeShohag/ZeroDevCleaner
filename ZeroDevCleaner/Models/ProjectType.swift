@@ -9,131 +9,80 @@ import Foundation
 import SwiftUI
 
 /// Represents the type of development project
-enum ProjectType: String, Codable, CaseIterable, Sendable {
-    case android
-    case iOS
-    case swiftPackage
-    case flutter
-    case nodeJS
-    case rust
-    case python
-    case go
-    case javaMaven
-    case ruby
-    case dotNet
-    case unity
+/// Dynamically loaded from configuration file
+struct ProjectType: Codable, Identifiable, Hashable, Sendable {
+    /// Unique identifier for this project type
+    let id: String
 
-    /// Human-readable display name
-    var displayName: String {
-        switch self {
-        case .android:
-            return "Android"
-        case .iOS:
-            return "iOS/Xcode"
-        case .swiftPackage:
-            return "Swift Package"
-        case .flutter:
-            return "Flutter"
-        case .nodeJS:
-            return "Node.js"
-        case .rust:
-            return "Rust"
-        case .python:
-            return "Python"
-        case .go:
-            return "Go"
-        case .javaMaven:
-            return "Java/Maven"
-        case .ruby:
-            return "Ruby"
-        case .dotNet:
-            return ".NET"
-        case .unity:
-            return "Unity"
-        }
-    }
+    /// Human-readable display name (e.g., "iOS/Xcode", "Node.js")
+    let displayName: String
 
-    /// SF Symbol icon name for the project type
-    var iconName: String {
-        switch self {
-        case .android:
-            return "app.badge.fill"
-        case .iOS:
-            return "apple.logo"
-        case .swiftPackage:
-            return "shippingbox.fill"
-        case .flutter:
-            return "wind"
-        case .nodeJS:
-            return "atom"
-        case .rust:
-            return "gearshape.2.fill"
-        case .python:
-            return "chevron.left.forwardslash.chevron.right"
-        case .go:
-            return "g.square.fill"
-        case .javaMaven:
-            return "cup.and.saucer.fill"
-        case .ruby:
-            return "diamond.fill"
-        case .dotNet:
-            return "number.square.fill"
-        case .unity:
-            return "cube.transparent.fill"
-        }
+    /// SF Symbol icon name for UI display
+    let iconName: String
+
+    /// Hex color code (e.g., "#3DDC84" for Android green)
+    private let colorHex: String
+
+    /// Folder name that this type is detected by (for display purposes only)
+    let buildFolderName: String
+
+    /// Validation rules for detecting this project type
+    let validation: ValidationRules
+
+    init(
+        id: String,
+        displayName: String,
+        iconName: String,
+        colorHex: String,
+        buildFolderName: String,
+        validation: ValidationRules
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.iconName = iconName
+        self.colorHex = colorHex
+        self.buildFolderName = buildFolderName
+        self.validation = validation
     }
 
     /// Color for the project type icon
     var color: Color {
-        switch self {
-        case .android:
-            return .green
-        case .iOS:
-            return .blue
-        case .swiftPackage:
-            return .orange
-        case .flutter:
-            return .cyan
-        case .nodeJS:
-            return .green
-        case .rust:
-            return .orange
-        case .python:
-            return .yellow
-        case .go:
-            return .cyan
-        case .javaMaven:
-            return .red
-        case .ruby:
-            return .red
-        case .dotNet:
-            return .purple
-        case .unity:
-            return .indigo
-        }
+        Color(hex: colorHex) ?? .gray
     }
 
-    /// Folder name pattern to search for
-    var buildFolderName: String {
-        switch self {
-        case .android, .flutter:
-            return "build"
-        case .iOS, .swiftPackage:
-            return ".build"
-        case .nodeJS:
-            return "node_modules"
-        case .rust, .javaMaven:
-            return "target"
-        case .python:
-            return "__pycache__"
-        case .go:
-            return "vendor"  // Go modules vendor directory
-        case .ruby:
-            return "vendor"  // Ruby gems vendor directory
-        case .dotNet:
-            return "bin"  // .NET build output
-        case .unity:
-            return "Library"  // Unity project library
-        }
+    // MARK: - Convenience Initializer from Config
+
+    /// Create ProjectType from configuration
+    init(from config: ProjectTypeConfig) {
+        self.id = config.id
+        self.displayName = config.displayName
+        self.iconName = config.iconName
+        self.colorHex = config.color
+        self.buildFolderName = config.folderNames.first ?? "build"
+        self.validation = config.validation
     }
+}
+
+// MARK: - Preview Helpers
+
+extension ProjectType {
+    /// Mock Android project type for previews
+    static let android = ProjectType(
+        id: "android",
+        displayName: "Android",
+        iconName: "app.badge.fill",
+        colorHex: "#3DDC84",
+        buildFolderName: "build",
+        validation: ValidationRules(mode: .parentHierarchy, maxSearchDepth: 5, requiredFiles: FileRequirement(anyOf: ["build.gradle"], allOf: nil), requiredDirectories: nil, fileExtensions: nil)
+    )
+
+    /// Mock iOS project type for previews
+    static let iOS = ProjectType(
+        id: "iOS",
+        displayName: "iOS/Xcode",
+        iconName: "apple.logo",
+        colorHex: "#007AFF",
+        buildFolderName: "build",
+        validation: ValidationRules(mode: .directoryEnumeration, maxSearchDepth: nil, requiredFiles: nil, requiredDirectories: nil, fileExtensions: ["xcodeproj", "xcworkspace"])
+    )
 }
