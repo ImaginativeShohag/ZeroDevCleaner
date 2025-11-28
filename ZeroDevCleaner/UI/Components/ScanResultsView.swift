@@ -223,55 +223,10 @@ struct ScanResultsView: View {
 
             Divider()
 
-            // Column Headers (matching two-row layout)
-            HStack(spacing: 8) {
-                // Checkbox column
-                Text("")
-                    .frame(width: 40)
-
-                // Project Column
-                Text("Project")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 150, maxWidth: 250, alignment: .leading)
-
-                // Right side headers
-                HStack(spacing: 12) {
-                    Text("Type")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(minWidth: 100, alignment: .leading)
-
-                    Text("Size")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(minWidth: 80, alignment: .trailing)
-
-                    Text("Last Modified")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(minWidth: 100, alignment: .leading)
-
-                    Spacer()
-
-                    Text("")
-                        .frame(width: 24)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color(nsColor: .controlBackgroundColor))
-
-            Divider()
-
             // Hierarchical Results List
             ScrollView {
                 LazyVStack(spacing: 0, pinnedViews: []) {
-                    ForEach(viewModel.sortedAndFilteredResults) { folder in
+                    ForEach(viewModel.sortedAndFilteredResults, id: \.id) { folder in
                         BuildFolderRowView(
                             folder: folder,
                             isExpanded: expandedBuildFolders.contains(folder.id),
@@ -282,6 +237,7 @@ struct ScanResultsView: View {
                             viewModel: viewModel,
                             level: 0
                         )
+                        .id(folder.id)
                     }
                 }
             }
@@ -988,51 +944,47 @@ private struct BuildFolderRowView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Two-row layout
-            HStack(alignment: .top, spacing: 8) {
-                // LEFT SIDE: Checkbox + Project (spans 2 rows)
-                HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                // LEFT SIDE: Checkbox + Project (centered vertically)
+                HStack(alignment: .center, spacing: 8) {
                     // Checkbox + Chevron column
-                    VStack(spacing: 0) {
-                        HStack(spacing: 4) {
-                            // Indentation
-                            if level > 0 {
-                                Spacer()
-                                    .frame(width: indentation)
-                            }
+                    HStack(spacing: 4) {
+                        // Indentation
+                        if level > 0 {
+                            Spacer()
+                                .frame(width: indentation)
+                        }
 
-                            // Chevron (if has children)
-                            if folder.hasSubItems {
-                                Button {
-                                    onToggleExpansion()
-                                } label: {
-                                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 12, height: 12)
-                                }
-                                .buttonStyle(.plain)
-                                .buttonHoverEffect()
-                            } else {
-                                Spacer().frame(width: 12)
-                            }
-
-                            // Checkbox
+                        // Chevron (if has children)
+                        if folder.hasSubItems {
                             Button {
-                                onToggleSelection()
+                                onToggleExpansion()
                             } label: {
-                                Image(systemName: checkboxIcon)
-                                    .foregroundStyle(.primary)
-                                    .font(.system(size: 14))
+                                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 12, height: 12)
                             }
                             .buttonStyle(.plain)
                             .buttonHoverEffect()
+                        } else {
+                            Spacer().frame(width: 12)
                         }
-                        .frame(width: 40 + (level > 0 ? indentation : 0))
 
-                        Spacer()
+                        // Checkbox
+                        Button {
+                            onToggleSelection()
+                        } label: {
+                            Image(systemName: checkboxIcon)
+                                .foregroundStyle(.primary)
+                                .font(.system(size: 14))
+                        }
+                        .buttonStyle(.plain)
+                        .buttonHoverEffect()
                     }
+                    .frame(width: 40 + (level > 0 ? indentation : 0))
 
-                    // Project Column (spans both rows)
+                    // Project Column
                     HStack(spacing: 6) {
                         Image(systemName: folder.projectType.iconName)
                             .foregroundStyle(folder.projectType.color)
@@ -1077,6 +1029,9 @@ private struct BuildFolderRowView: View {
                             .monospacedDigit()
                             .frame(minWidth: 80, alignment: .trailing)
 
+                        Spacer()
+                            .frame(width: 24)
+
                         // Last Modified
                         HStack(spacing: 4) {
                             if folder.isOld {
@@ -1092,18 +1047,6 @@ private struct BuildFolderRowView: View {
                         .frame(minWidth: 100, alignment: .leading)
 
                         Spacer()
-
-                        // Show in Finder button
-                        Button {
-                            onShowInFinder(folder)
-                        } label: {
-                            Image(systemName: "folder.fill")
-                                .font(.caption)
-                                .foregroundStyle(.blue)
-                        }
-                        .buttonStyle(.borderless)
-                        .buttonHoverEffect()
-                        .help("Show in Finder")
                     }
 
                     // Row 2: Path
@@ -1113,6 +1056,19 @@ private struct BuildFolderRowView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
+
+                // Show in Finder button (vertically centered to the entire row)
+                Button {
+                    onShowInFinder(folder)
+                } label: {
+                    Image(systemName: "arrow.up.forward.app")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.borderless)
+                .buttonHoverEffect()
+                .help("Show in Finder")
+                .frame(width: 24)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -1134,7 +1090,7 @@ private struct BuildFolderRowView: View {
 
             // Recursive sub-items
             if isExpanded && folder.hasSubItems {
-                ForEach(folder.subItems) { subFolder in
+                ForEach(folder.subItems, id: \.id) { subFolder in
                     BuildFolderRowView(
                         folder: subFolder,
                         isExpanded: expandedFolders.contains(subFolder.id),
@@ -1154,6 +1110,7 @@ private struct BuildFolderRowView: View {
                         viewModel: viewModel,  // Pass viewModel to children
                         level: level + 1
                     )
+                    .id(subFolder.id)
                 }
             }
         }

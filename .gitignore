@@ -29,5 +29,11 @@ Pods/
 # macOS
 .DS_Store
 
+# AI
+.claude
+
 # AI Progress
 .ai-progress.json
+
+# MCP
+.mcp.json

@@ -127,6 +127,7 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
+				ORGANIZATIONNAME = "Md. Mahmudul Hasan Shohag";
 				TargetAttributes = {
 					459816942EAC20B8005932FA = {
 						CreatedOnToolsVersion = 26.0.1;
